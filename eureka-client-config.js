@@ -1,6 +1,7 @@
 // example configuration
 
 module.exports = {
+  // application instance information
   instance: {
     app: 'jqservice',
     hostName: 'localhost',
@@ -12,7 +13,7 @@ module.exports = {
     }
   },
   eureka: {
-    // server host / port
+    // eureka server host / port
     host: '192.168.99.100',
     port: 32768
   }
