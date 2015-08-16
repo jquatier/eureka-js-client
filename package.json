@@ -2,9 +2,9 @@
   "name": "eureka-js-client",
   "version": "1.0.0",
   "description": "JS implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.",
-  "main": "index.js",
+  "main": "lib/eureka-client.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepublish": "gulp"
   },
   "repository": {
     "type": "git",
@@ -23,5 +23,9 @@
   "homepage": "https://github.com/jquatier/eureka-js-client",
   "dependencies": {
     "request": "^2.60.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.0",
+    "gulp-babel": "^5.2.0"
   }
 }
