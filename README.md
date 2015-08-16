@@ -8,7 +8,7 @@ JS implementation of a client for Eureka (https://github.com/Netflix/eureka), th
 #### Add Eureka client to a Node application.
 Note: If the configuration object is not passed to the constuctor, the module will look for configuration file named 'eureka-client-config.js'.
 ```javascript
-var Eureka = require('./lib/eureka-client.js');
+var Eureka = require('eureka-js-client');
 
 // example configuration
 var client = new Eureka({
