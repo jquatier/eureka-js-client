@@ -83,4 +83,22 @@ export default class Eureka {
     }
   }
 
+  /*
+    Retrieves a list of instances from server given an appId
+  */
+  getInstancesByAppId(appId) {
+    if (!appId) {
+      throw new Error('Unable to query instances with no appId');
+    }
+    request.get({
+      url: `${this.baseEurekaUrl()}${appId}`,
+      headers: {Accept: 'application/json'}
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        return body;
+      } else {
+        throw new Error('Unable to retrieve instances for appId: ', appId);
+      }
+    });
+  }
 }
