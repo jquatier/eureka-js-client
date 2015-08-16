@@ -9,9 +9,12 @@ import request from 'request';
 
 export default class Eureka {
 
-  constructor() {
+  constructor(config) {
     console.log('initializing eureka client');
-    this.config = require('./eureka-client-config.js');
+    this.config = config;
+    if(!config) {
+      this.config = require(process.cwd() + '/eureka-client-config.js');
+    }
     if(!this.config) {
       throw new Error('missing configuration file.')
     } else if(!this.config.instance || !this.config.eureka) {
@@ -81,5 +84,3 @@ export default class Eureka {
   }
 
 }
-
-//module.exports = new Eureka();

@@ -1,6 +1,7 @@
-// example configuration
+var Eureka = require('./lib/eureka-client.js');
 
-module.exports = {
+// example configuration
+var client = new Eureka({
   // application instance information
   instance: {
     app: 'jqservice',
@@ -17,4 +18,4 @@ module.exports = {
     host: '192.168.99.100',
     port: 32768
   }
-}
+});

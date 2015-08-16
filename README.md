@@ -6,7 +6,27 @@ JS implementation of a client for Eureka (https://github.com/Netflix/eureka), th
 ### Usage
 
 #### Add Eureka client to a Node application.
-Note: A configuration file named 'eureka-client-config.js' is required for initializing the module.
+Note: If the configuration object is not passed to the constuctor, the module will look for configuration file named 'eureka-client-config.js'.
 ```javascript
-var eureka = require('eureka'); // registers and initializes heartbeats with Eureka server.
+var Eureka = require('./lib/eureka-client.js');
+
+// example configuration
+var client = new Eureka({
+  // application instance information
+  instance: {
+    app: 'jqservice',
+    hostName: 'localhost',
+    ipAddr: '127.0.0.1',
+    port: 8080,
+    vipAddress: 'jq.test.something.com',
+    dataCenterInfo: {
+      name: 'MyOwn'
+    }
+  },
+  eureka: {
+    // eureka server host / port
+    host: '192.168.99.100',
+    port: 32768
+  }
+});
 ```
