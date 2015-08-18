@@ -34,14 +34,10 @@ export default class Eureka {
       body: {instance: this.config.instance}
     }, (error, response, body) => {
       if(!error && response.statusCode == 204) {
-        console.log('registered with eureka: ' + this.config.instance.app + '/' + this.getInstanceId());
+        console.log('registered with eureka: ', `${this.config.instance.app}/${this.getInstanceId()}`);
         this.startHeartbeats();
       } else {
-        if(error) {
-          throw new Error('request failed: ' + error);
-        } else {
-          throw new Error('request failed: ' + response.statusCode + ' body: ' + body);
-        }
+        throw new Error('eureka registration FAILED: ' + (error ? error : `status: ${response.statusCode} body: ${body}`));
       }
     });
   }
@@ -53,12 +49,12 @@ export default class Eureka {
   startHeartbeats() {
     this.heartbeat = setInterval(() => {
       request.put({
-        url: this.baseEurekaUrl() + this.config.instance.app + '/' + this.getInstanceId() 
+        url: `${this.baseEurekaUrl()}${this.config.instance.app}/${this.getInstanceId()}` 
       }, (error, response, body) => {
         if(!error && response.statusCode == 200) {
           console.log('eureka heartbeat success');
         } else {
-          console.warn('eureka heartbeat FAILED, will retry.', error ? error : 'status: ' + response.statusCode);
+          console.warn('eureka heartbeat FAILED, will retry. ' + (error ? error : `status: ${response.statusCode} body: ${body}`));
         }
       });
     }, this.config.eureka.heartbeatInterval || 30000);
@@ -68,7 +64,7 @@ export default class Eureka {
     Base Eureka server URL + path
   */
   baseEurekaUrl() {
-    return 'http://' + this.config.eureka.host + ':' + this.config.eureka.port + '/eureka/v2/apps/';
+    return `http:\/\/${this.config.eureka.host}:${this.config.eureka.port}/eureka/v2/apps/`;
   }
 
   /*
