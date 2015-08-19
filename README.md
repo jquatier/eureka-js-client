@@ -30,3 +30,21 @@ var client = new Eureka({
   }
 });
 ```
+
+### Tests
+
+Single run of unit tests:
+
+```javascript
+
+gulp test
+
+```
+
+Watch src/ and test/ files execute unit tests:
+
+```javascript
+
+gulp test:watch
+
+```
