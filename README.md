@@ -30,6 +30,14 @@ var client = new Eureka({
   }
 });
 ```
+#### Get Instances By AppId
+
+```javascript
+
+// appInfo.application.instance contains array of instances
+var appInfo = client.getInstancesByAppId('YOURSERVICE');
+
+```
 
 ### Tests
 
