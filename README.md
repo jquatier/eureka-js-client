@@ -1,4 +1,4 @@
-# eureka-js-client
+# eureka-js-client [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client)
 JS implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.
 
 [![NPM](https://nodei.co/npm/eureka-js-client.png)](https://nodei.co/npm/eureka-js-client/)
