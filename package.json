@@ -4,7 +4,8 @@
   "description": "JS implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.",
   "main": "lib/eureka-client.js",
   "scripts": {
-    "prepublish": "gulp"
+    "prepublish": "gulp",
+    "test": "gulp test"
   },
   "repository": {
     "type": "git",
