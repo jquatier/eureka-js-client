@@ -27,6 +27,7 @@
     "request": "^2.60.0"
   },
   "devDependencies": {
+    "babel": "^5.8.21",
     "chai": "^3.2.0",
     "eslint": "^1.2.0",
     "eslint-config-xo": "^0.3.1",

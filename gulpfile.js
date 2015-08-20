@@ -2,6 +2,7 @@ var gulp = require('gulp');
 var babel = require('gulp-babel');
 var mocha = require('gulp-mocha');
 var eslint = require('gulp-eslint');
+var mochaBabel = require('babel/register');
 
 gulp.task('build', function() {
   return gulp.src('src/**/*.js')
@@ -17,9 +18,13 @@ gulp.task('lint', function() {
 });
 
 gulp.task('test', function () {
-  return gulp.src('test/**/*.test.js', {read: false})
-    .pipe(babel())
-    .pipe(mocha({reporter: 'spec'}));
+  return gulp.src('test/**/*.test.js')
+    .pipe(mocha({
+      reporter: 'spec',
+      compilers: {
+        js: babel
+      }
+    }));
 });
 
 gulp.task('test:watch', function() {

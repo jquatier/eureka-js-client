@@ -1,6 +1,6 @@
-let sinon = require('sinon');
-let expect = require('chai').expect;
-let Eureka = require('../src/eureka-client');
+import sinon from 'sinon';
+import { expect } from 'chai';
+import Eureka from '../src/eureka-client';
 
 describe('eureka client', () => {
 
