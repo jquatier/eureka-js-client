@@ -1,19 +1,34 @@
-require('babel/register');
-var gulp = require('gulp'),
-    babel = require('gulp-babel'),
-    mocha = require('gulp-mocha');
+var gulp = require('gulp');
+var babel = require('gulp-babel');
+var mocha = require('gulp-mocha');
+var eslint = require('gulp-eslint');
+var mochaBabel = require('babel/register');
 
-gulp.task('default', function() {
-  return gulp.src('src/eureka-client.js')
+gulp.task('build', function() {
+  return gulp.src('src/**/*.js')
     .pipe(babel())
     .pipe(gulp.dest('lib'));
 });
 
+gulp.task('lint', function() {
+  return gulp.src('src/**/*.js')
+    .pipe(eslint())
+    .pipe(eslint.format())
+    .pipe(eslint.failOnError());
+});
+
 gulp.task('test', function () {
-  return gulp.src('test/**.test.js', {read: false})
-    .pipe(mocha({reporter: 'spec'}));
+  return gulp.src('test/**/*.test.js', {read: false})
+    .pipe(mocha({
+      reporter: 'spec',
+      compilers: {
+        js: babel
+      }
+    }));
 });
 
 gulp.task('test:watch', function() {
-  return gulp.watch(['src/eureka-client.js', 'test/eureka-client.test.js'], ['test']);
+  return gulp.watch(['src/**/*.js', 'test/**/*.test.js'], ['test']);
 });
+
+gulp.task('default', ['build']);
