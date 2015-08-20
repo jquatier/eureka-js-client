@@ -1,4 +1,8 @@
 import request from 'request';
+import fs from 'fs';
+import yaml from 'js-yaml';
+import merge from 'deepmerge';
+import path from 'path';
 
 /*
   Eureka JS client
@@ -13,7 +17,21 @@ export default class Eureka {
     console.log('initializing eureka client');
     this.config = config;
     if (!config) {
-      this.config = require(process.cwd() + '/eureka-client-config.js');
+      // Load up the current working directory and the environment:
+      const cwd = process.cwd();
+      const env = process.env.NODE_ENV || 'development';
+
+      // Attempt to load the config file:
+      try {
+        config = yaml.safeLoad(fs.readFileSync(path.join(cwd, 'eureka-client.yml'), 'utf8'));
+      } catch(e) {}
+
+      try {
+        const envConfig = yaml.safeLoad(fs.readFileSync(path.join(cwd, `eureka-client-${env}.yml`), 'utf8'));
+        config = merge(config, envConfig);
+      }catch(e) {}
+
+      this.config = config;
     }
     if (!this.config) {
       throw new Error('missing configuration file.');

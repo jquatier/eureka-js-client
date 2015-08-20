@@ -24,6 +24,8 @@
   },
   "homepage": "https://github.com/jquatier/eureka-js-client",
   "dependencies": {
+    "deepmerge": "^0.2.10",
+    "js-yaml": "^3.3.1",
     "request": "^2.60.0"
   },
   "devDependencies": {
