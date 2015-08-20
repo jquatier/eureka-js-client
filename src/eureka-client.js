@@ -7,8 +7,7 @@ import path from 'path';
 /*
   Eureka JS client
   This module handles registration with a Eureka server, as well as heartbeats 
-  for reporting instance health. This module requires a eureka-client-config.js configuration
-  file.
+  for reporting instance health.
 */
 
 export default class Eureka {
