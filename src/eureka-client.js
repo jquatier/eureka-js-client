@@ -104,7 +104,7 @@ export default class Eureka {
     }
     let instances = this.registryCacheByVIP[vipAddress];
     if (!instances) {
-      throw new Error(`Unable to retrieves instances for vipAddress: ${vipAdress}`);
+      throw new Error(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
   }
 
