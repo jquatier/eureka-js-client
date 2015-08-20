@@ -12,13 +12,14 @@ export default class Eureka {
   constructor(config) {
     console.log('initializing eureka client');
     this.config = config;
-    if(!config) {
+    if (!config) {
       this.config = require(process.cwd() + '/eureka-client-config.js');
     }
-    if(!this.config) {
-      throw new Error('missing configuration file.')
-    } else if(!this.config.instance || !this.config.eureka) {
-      throw new Error('missing instance / eureka configuration.')
+    if (!this.config) {
+      throw new Error('missing configuration file.');
+    }
+    if (!this.config.instance || !this.config.eureka) {
+      throw new Error('missing instance / eureka configuration.');
     }
     this.register();
   }
@@ -33,7 +34,7 @@ export default class Eureka {
       json: true,
       body: {instance: this.config.instance}
     }, (error, response, body) => {
-      if(!error && response.statusCode == 204) {
+      if (!error && response.statusCode === 204) {
         console.log('registered with eureka: ', `${this.config.instance.app}/${this.getInstanceId()}`);
         this.startHeartbeats();
       } else {
@@ -51,7 +52,7 @@ export default class Eureka {
       request.put({
         url: `${this.baseEurekaUrl()}${this.config.instance.app}/${this.getInstanceId()}` 
       }, (error, response, body) => {
-        if(!error && response.statusCode == 200) {
+        if (!error && response.statusCode === 200) {
           console.log('eureka heartbeat success');
         } else {
           console.warn('eureka heartbeat FAILED, will retry. ' + (error ? error : `status: ${response.statusCode} body: ${body}`));
@@ -72,11 +73,10 @@ export default class Eureka {
     instance-id in the metadata. Else, it's the hostName.
   */
   getInstanceId() {
-    if(this.config.instance.dataCenterInfo === 'Amazon') {
+    if (this.config.instance.dataCenterInfo === 'Amazon') {
       return this.config.instance.dataCenterInfo.metadata['instance-id'];
-    } else {
-      return this.config.instance.hostName;
     }
+    return this.config.instance.hostName;
   }
 
   /*
@@ -92,9 +92,8 @@ export default class Eureka {
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
         return body;
-      } else {
-        throw new Error('Unable to retrieve instances for appId: ', appId);
       }
+      throw new Error('Unable to retrieve instances for appId: ', appId);
     });
   }
 }
