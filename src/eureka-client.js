@@ -29,7 +29,7 @@ export default class Eureka {
       try {
         const envConfig = yaml.safeLoad(fs.readFileSync(path.join(cwd, `eureka-client-${env}.yml`), 'utf8'));
         config = merge(config, envConfig);
-      }catch(e) {}
+      } catch(e) {}
 
       this.config = config;
     }
