@@ -21,6 +21,7 @@ export default class Eureka {
       throw new Error('missing instance / eureka configuration.')
     }
     this.registryCache = {};
+    this.registryCacheByVIP = {};
     this.register();
   }
 
@@ -81,7 +82,7 @@ export default class Eureka {
   }
 
   /*
-    Retrieves a list of instances from server given an appId
+    Retrieves a list of instances from Eureka server given an appId
   */
   getInstancesByAppId(appId) {
     if (!appId) {
@@ -92,6 +93,19 @@ export default class Eureka {
       throw new Error(`Unable to retrieve instances for appId: ${appId}`);
     }
     return instances;
+  }
+
+  /*
+    Retrieves a list of instances from Eureka server given a vipAddress
+   */
+  getInstancesByVipAddress(vipAddress) {
+    if (!vipAddress) {
+      throw new Error('Unable to query instances with no vipAddress');
+    }
+    let instances = this.registryCacheByVIP[vipAddress];
+    if (!instances) {
+      throw new Error(`Unable to retrieves instances for vipAddress: ${vipAdress}`);
+    }
   }
 
   /*
@@ -119,6 +133,13 @@ export default class Eureka {
     }
     _.map(registry.applications.application, (app) => {
       this.registryCache[app.name.toUpperCase()] = app.instance;
+      let vipAddress;
+      if (app.instance.length) {
+        vipAddress = app.instance[0].vipAddress;
+      } else {
+        vipAddress = app.instance.vipAddress;
+      }
+      this.registryCacheByVIP[vipAddress] = app.instance;
     });
   }
 
