@@ -1,5 +1,5 @@
 import request from 'request';
-
+import _ from 'lodash';
 /*
   Eureka JS client
   This module handles registration with a Eureka server, as well as heartbeats 
@@ -20,6 +20,7 @@ export default class Eureka {
     } else if(!this.config.instance || !this.config.eureka) {
       throw new Error('missing instance / eureka configuration.')
     }
+    this.registryCache = {};
     this.register();
   }
 
@@ -86,15 +87,39 @@ export default class Eureka {
     if (!appId) {
       throw new Error('Unable to query instances with no appId');
     }
+    let instances = this.registryCache[appId.toUpperCase()];
+    if (!instances) {
+      throw new Error(`Unable to retrieve instances for appId: ${appId}`);
+    }
+    return instances;
+  }
+
+  /*
+    Retrieves all applications registered with the Eureka server
+   */
+  fetchRegistry() {
     request.get({
-      url: `${this.baseEurekaUrl()}${appId}`,
+      url: this.baseEurekaUrl(),
       headers: {Accept: 'application/json'}
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
-        return body;
+        this.transformRegistry(JSON.parse(body));
       } else {
-        throw new Error('Unable to retrieve instances for appId: ', appId);
+        throw new Error('Unable to retrieve registry from Eureka server');
       }
     });
   }
+
+  /*
+    Transforms the given registry and caches the registry locally
+   */
+  transformRegistry(registry) {
+    if (!registry) {
+      throw new Error('Unable to transform empty registry');
+    }
+    _.map(registry.applications.application, (app) => {
+      this.registryCache[app.name.toUpperCase()] = app.instance;
+    });
+  }
+
 }
