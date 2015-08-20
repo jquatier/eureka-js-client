@@ -18,7 +18,7 @@ gulp.task('lint', function() {
 });
 
 gulp.task('test', function () {
-  return gulp.src('test/**/*.test.js')
+  return gulp.src('test/**/*.test.js', {read: false})
     .pipe(mocha({
       reporter: 'spec',
       compilers: {
