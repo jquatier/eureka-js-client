@@ -1,4 +1,4 @@
-# eureka-js-client [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client)
+# eureka-js-client [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client) [![Coverage Status](https://coveralls.io/repos/jquatier/eureka-js-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/jquatier/eureka-js-client?branch=master)
 JS implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.
 
 [![NPM](https://nodei.co/npm/eureka-js-client.png)](https://nodei.co/npm/eureka-js-client/)
@@ -43,12 +43,18 @@ If the configuration object is not passed to the constructor, the module will lo
 
 By default, Eureka client searches for the YAML file `eureka-client.yml` in the current working directory. It further searches for environment specific overrides in the environment specific YAML files. The environment is typically `test` or `production`, and is determined by the `NODE_ENV` environment variable.
 
-
-### Get Instances By AppId
+### Get Instances By App ID
 
 ```javascript
 // appInfo.application.instance contains array of instances
 var appInfo = client.getInstancesByAppId('YOURSERVICE');
+```
+
+### Get Instances By Vip Address
+
+```javascript
+// appInfo.application.instance contains array of instances
+var appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
 ## Tests

@@ -38,7 +38,10 @@ export default class Eureka {
     if (!this.config.instance || !this.config.eureka) {
       throw new Error('missing instance / eureka configuration.');
     }
+    this.registryCache = {};
+    this.registryCacheByVIP = {};
     this.register();
+    this.fetchRegistry();
   }
 
   /*
@@ -54,6 +57,7 @@ export default class Eureka {
       if (!error && response.statusCode === 204) {
         console.log('registered with eureka: ', `${this.config.instance.app}/${this.getInstanceId()}`);
         this.startHeartbeats();
+        this.startRegistryFetches();
       } else {
         throw new Error('eureka registration FAILED: ' + (error ? error : `status: ${response.statusCode} body: ${body}`));
       }
@@ -79,6 +83,15 @@ export default class Eureka {
   }
 
   /*
+    Sets up registry fetches on interval for the life of the application.
+    Registry fetch interval setting configuration property: eureka.registryFetchInterval
+  */
+  startRegistryFetches() {
+    this.registryFetch = setInterval(() => {
+      this.fetchRegistry(); }, this.config.eureka.registryFetchInterval || 30000);
+  }
+
+  /*
     Base Eureka server URL + path
   */
   baseEurekaUrl() {
@@ -97,20 +110,68 @@ export default class Eureka {
   }
 
   /*
-    Retrieves a list of instances from server given an appId
+    Retrieves a list of instances from Eureka server given an appId
   */
   getInstancesByAppId(appId) {
     if (!appId) {
       throw new Error('Unable to query instances with no appId');
     }
+    const instances = this.registryCache[appId.toUpperCase()];
+    if (!instances) {
+      throw new Error(`Unable to retrieve instances for appId: ${appId}`);
+    }
+    return instances;
+  }
+
+  /*
+    Retrieves a list of instances from Eureka server given a vipAddress
+   */
+  getInstancesByVipAddress(vipAddress) {
+    if (!vipAddress) {
+      throw new Error('Unable to query instances with no vipAddress');
+    }
+    const instances = this.registryCacheByVIP[vipAddress];
+    if (!instances) {
+      throw new Error(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
+    }
+  }
+
+  /*
+    Retrieves all applications registered with the Eureka server
+   */
+  fetchRegistry() {
     request.get({
-      url: `${this.baseEurekaUrl()}${appId}`,
+      url: this.baseEurekaUrl(),
       headers: {Accept: 'application/json'}
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
-        return body;
+        console.log('retrieved registry successfully');
+        this.transformRegistry(JSON.parse(body));
+      } else {
+        throw new Error('Unable to retrieve registry from Eureka server');
       }
-      throw new Error('Unable to retrieve instances for appId: ', appId);
     });
   }
+
+  /*
+    Transforms the given registry and caches the registry locally
+   */
+  transformRegistry(registry) {
+    if (!registry) {
+      throw new Error('Unable to transform empty registry');
+    }
+
+    for (let i = 0; i < registry.applications.application.length; i++) {
+      const app = registry.applications.application[i];
+      this.registryCache[app.name.toUpperCase()] = app.instance;
+      let vipAddress;
+      if (app.instance.length) {
+        vipAddress = app.instance[0].vipAddress;
+      } else {
+        vipAddress = app.instance.vipAddress;
+      }
+      this.registryCacheByVIP[vipAddress] = app.instance;
+    }
+  }
+
 }
