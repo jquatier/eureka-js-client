@@ -1,41 +1,57 @@
 import sinon from 'sinon';
-import { expect } from 'chai';
+import {expect} from 'chai';
 import Eureka from '../src/eureka-client';
 
 describe('eureka client', () => {
-
   describe('Eureka()', () => {
-
-    it('should throw an error if no config', () => {
-      try {
-        new Eureka({});
-      } catch (e) {
-        expect(e.message).to.equal('missing instance / eureka configuration.');
-        return;
+    it('should throw an error if no config is found', () => {
+      function fn() {
+        return new Eureka();
       }
-      throw new Error();
+      expect(fn).to.throw();
     });
 
-    it('should throw an error if config does not contain instance', () => {
-      try {
-        new Eureka({eureka: {}});
-      } catch (e) {
-        expect(e.message).to.equal('missing instance / eureka configuration.');
-        return;
-      }
-      throw new Error();
-    });
+    it('should construct with the correct configuration values', () => {
+      const registerStub = sinon.stub(Eureka.prototype, 'register');
+      const fetchStub = sinon.stub(Eureka.prototype, 'fetchRegistry'); 
 
-    it('should throw an error if config does not contain eureka server info', () => {
-      try {
-        new Eureka({instance: ''});
-      } catch (e) {
-        expect(e.message).to.equal('missing instance / eureka configuration.');
-        return;
+      function shouldThrow() {
+        return new Eureka();
       }
-      throw new Error();
-    });
 
+      function noApp() {
+        return new Eureka({
+          instance: {
+            vipAddress: true,
+            port: true
+          },
+          eureka: {
+            host: true,
+            port: true
+          }
+        });
+      }
+
+      function shouldWork() {
+        return new Eureka({
+          instance: {
+            app: true,
+            vipAddress: true,
+            port: true
+          },
+          eureka: {
+            host: true,
+            port: true
+          }
+        });
+      }
+
+      expect(shouldThrow).to.throw();
+      expect(noApp).to.throw(/app/);
+      expect(shouldWork).to.not.throw();
+
+      registerStub.restore();
+      fetchStub.restore();
+    });
   });
-
 });
