@@ -7,8 +7,7 @@ import path from 'path';
 /*
   Eureka JS client
   This module handles registration with a Eureka server, as well as heartbeats 
-  for reporting instance health. This module requires a eureka-client-config.js configuration
-  file.
+  for reporting instance health.
 */
 
 export default class Eureka {
@@ -29,7 +28,7 @@ export default class Eureka {
       try {
         const envConfig = yaml.safeLoad(fs.readFileSync(path.join(cwd, `eureka-client-${env}.yml`), 'utf8'));
         config = merge(config, envConfig);
-      }catch(e) {}
+      } catch(e) {}
 
       this.config = config;
     }
