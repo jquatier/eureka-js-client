@@ -23,6 +23,7 @@ export default class Eureka {
     this.registryCache = {};
     this.registryCacheByVIP = {};
     this.register();
+    this.fetchRegistry();
   }
 
   /*
