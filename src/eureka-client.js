@@ -127,7 +127,7 @@ export default class Eureka {
       headers: {Accept: 'application/json'}
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
-        console.log('Retrieve registry successfully');
+        console.log('retrieved registry successfully');
         this.transformRegistry(JSON.parse(body));
       } else {
         throw new Error('Unable to retrieve registry from Eureka server');

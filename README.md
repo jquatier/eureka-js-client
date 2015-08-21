@@ -1,4 +1,4 @@
-# eureka-js-client [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client)
+# eureka-js-client [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client) [![Coverage Status](https://coveralls.io/repos/jquatier/eureka-js-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/jquatier/eureka-js-client?branch=master)
 JS implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.
 
 [![NPM](https://nodei.co/npm/eureka-js-client.png)](https://nodei.co/npm/eureka-js-client/)
@@ -38,11 +38,18 @@ var client = new Eureka({
 });
 ```
 
-### Get Instances By AppId
+### Get Instances By App ID
 
 ```javascript
 // appInfo.application.instance contains array of instances
 var appInfo = client.getInstancesByAppId('YOURSERVICE');
+```
+
+### Get Instances By Vip Address
+
+```javascript
+// appInfo.application.instance contains array of instances
+var appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
 ## Tests
