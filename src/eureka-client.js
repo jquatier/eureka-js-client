@@ -68,7 +68,8 @@ export default class Eureka {
     Registry fetch interval setting configuration property: eureka.registryFetchInterval
   */
   startRegistryFetches() {
-    this.registryFetch = setInterval(()=> {this.fetchRegistry()}, this.config.eureka.registryFetchInterval || 30000);
+    this.registryFetch = setInterval(() => {
+      this.fetchRegistry(); }, this.config.eureka.registryFetchInterval || 30000);
   }
 
   /*
@@ -96,7 +97,7 @@ export default class Eureka {
     if (!appId) {
       throw new Error('Unable to query instances with no appId');
     }
-    let instances = this.registryCache[appId.toUpperCase()];
+    const instances = this.registryCache[appId.toUpperCase()];
     if (!instances) {
       throw new Error(`Unable to retrieve instances for appId: ${appId}`);
     }
@@ -110,7 +111,7 @@ export default class Eureka {
     if (!vipAddress) {
       throw new Error('Unable to query instances with no vipAddress');
     }
-    let instances = this.registryCacheByVIP[vipAddress];
+    const instances = this.registryCacheByVIP[vipAddress];
     if (!instances) {
       throw new Error(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
@@ -125,6 +126,7 @@ export default class Eureka {
       headers: {Accept: 'application/json'}
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
+        console.log('Retrieve registry successfully');
         this.transformRegistry(JSON.parse(body));
       } else {
         throw new Error('Unable to retrieve registry from Eureka server');
@@ -140,8 +142,8 @@ export default class Eureka {
       throw new Error('Unable to transform empty registry');
     }
 
-    for (var i = 0; i < registry.applications.application.length; i++) {
-      let app = registry.applications.application[i];
+    for (let i = 0; i < registry.applications.application.length; i++) {
+      const app = registry.applications.application[i];
       this.registryCache[app.name.toUpperCase()] = app.instance;
       let vipAddress;
       if (app.instance.length) {
