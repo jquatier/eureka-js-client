@@ -12,7 +12,8 @@ npm install eureka-js-client --save
 ```
 
 ### Add Eureka client to a Node application.
-Note: If the configuration object is not passed to the constuctor, the module will look for configuration file named `eureka-client-config.js` in the current working directory.
+
+The Eureka module exports a JavaScript function that can be constructed.
 
 ```javascript
 var Eureka = require('eureka-js-client');
@@ -37,6 +38,10 @@ var client = new Eureka({
   }
 });
 ```
+
+If the configuration object is not passed to the constructor, the module will look for a YAML configuration file.
+
+By default, Eureka client searches for the YAML file `eureka-client.yml` in the current working directory. It further searches for environment specific overrides in the environment specific YAML files. The environment is typically `test` or `production`, and is determined by the `NODE_ENV` environment variable.
 
 ### Get Instances By App ID
 
