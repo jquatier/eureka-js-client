@@ -5,7 +5,8 @@
   "main": "lib/eureka-client.js",
   "scripts": {
     "prepublish": "gulp",
-    "test": "gulp test"
+    "test": "gulp test",
+    "coveralls": "cat ./coverage/lcov.info | coveralls && rm -rf ./coverage"
   },
   "repository": {
     "type": "git",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "babel": "^5.8.21",
     "chai": "^3.2.0",
+    "coveralls": "^2.11.4",
     "eslint": "^1.2.0",
     "eslint-config-xo": "^0.3.1",
     "gulp": "^3.9.0",
