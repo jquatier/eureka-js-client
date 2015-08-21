@@ -1,5 +1,4 @@
 import request from 'request';
-import _ from 'lodash';
 /*
   Eureka JS client
   This module handles registration with a Eureka server, as well as heartbeats 
@@ -39,6 +38,7 @@ export default class Eureka {
       if (!error && response.statusCode === 204) {
         console.log('registered with eureka: ', `${this.config.instance.app}/${this.getInstanceId()}`);
         this.startHeartbeats();
+        this.startRegistryFetches();
       } else {
         throw new Error('eureka registration FAILED: ' + (error ? error : `status: ${response.statusCode} body: ${body}`));
       }
@@ -61,6 +61,14 @@ export default class Eureka {
         }
       });
     }, this.config.eureka.heartbeatInterval || 30000);
+  }
+
+  /*
+    Sets up registry fetches on interval for the life of the application.
+    Registry fetch interval setting configuration property: eureka.registryFetchInterval
+  */
+  startRegistryFetches() {
+    this.registryFetch = setInterval(()=> {this.fetchRegistry()}, this.config.eureka.registryFetchInterval || 30000);
   }
 
   /*
@@ -131,7 +139,9 @@ export default class Eureka {
     if (!registry) {
       throw new Error('Unable to transform empty registry');
     }
-    _.map(registry.applications.application, (app) => {
+
+    for (var i = 0; i < registry.applications.application.length; i++) {
+      let app = registry.applications.application[i];
       this.registryCache[app.name.toUpperCase()] = app.instance;
       let vipAddress;
       if (app.instance.length) {
@@ -140,7 +150,7 @@ export default class Eureka {
         vipAddress = app.instance.vipAddress;
       }
       this.registryCacheByVIP[vipAddress] = app.instance;
-    });
+    }
   }
 
 }
