@@ -50,12 +50,12 @@ export default class Eureka {
   register() {
     this.config.instance.status = 'UP';
     request.post({
-      url: this.baseEurekaUrl() + this.config.instance.app, 
+      url: this.eurekaUrl + this.config.instance.app, 
       json: true,
       body: {instance: this.config.instance}
     }, (error, response, body) => {
       if (!error && response.statusCode === 204) {
-        console.log('registered with eureka: ', `${this.config.instance.app}/${this.getInstanceId()}`);
+        console.log('registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
         this.startHeartbeats();
         this.startRegistryFetches();
       } else {
@@ -71,7 +71,7 @@ export default class Eureka {
   startHeartbeats() {
     this.heartbeat = setInterval(() => {
       request.put({
-        url: `${this.baseEurekaUrl()}${this.config.instance.app}/${this.getInstanceId()}` 
+        url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}` 
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           console.log('eureka heartbeat success');
@@ -88,22 +88,23 @@ export default class Eureka {
   */
   startRegistryFetches() {
     this.registryFetch = setInterval(() => {
-      this.fetchRegistry(); }, this.config.eureka.registryFetchInterval || 30000);
+      this.fetchRegistry();
+    }, this.config.eureka.registryFetchInterval || 30000);
   }
 
   /*
     Base Eureka server URL + path
   */
-  baseEurekaUrl() {
-    return `http:\/\/${this.config.eureka.host}:${this.config.eureka.port}/eureka/v2/apps/`;
+  get eurekaUrl() {
+    return `http://${this.config.eureka.host}:${this.config.eureka.port}/eureka/v2/apps/`;
   }
 
   /*
     Helper method to get the instance ID. If the datacenter is AWS, this will be the 
     instance-id in the metadata. Else, it's the hostName.
   */
-  getInstanceId() {
-    if (this.config.instance.dataCenterInfo === 'Amazon') {
+  get instanceId() {
+    if (this.config.instance.dataCenterInfo.toLowercase() === 'amazon') {
       return this.config.instance.dataCenterInfo.metadata['instance-id'];
     }
     return this.config.instance.hostName;
@@ -141,7 +142,7 @@ export default class Eureka {
    */
   fetchRegistry() {
     request.get({
-      url: this.baseEurekaUrl(),
+      url: this.eurekaUrl,
       headers: {Accept: 'application/json'}
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
