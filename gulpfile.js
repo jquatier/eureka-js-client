@@ -2,6 +2,8 @@ var gulp = require('gulp');
 var babel = require('gulp-babel');
 var mocha = require('gulp-mocha');
 var eslint = require('gulp-eslint');
+var instrumenter = require('babel-istanbul').Instrumenter;
+var istanbul = require('gulp-istanbul');
 var mochaBabel = require('babel/register');
 
 gulp.task('build', function() {
@@ -17,14 +19,19 @@ gulp.task('lint', function() {
     .pipe(eslint.failOnError());
 });
 
-gulp.task('mocha', function () {
-  return gulp.src('test/**/*.test.js', {read: false})
-    .pipe(mocha({
-      reporter: 'spec',
-      compilers: {
-        js: babel
-      }
-    }));
+gulp.task('mocha', function (cb) {
+  gulp.src('src/**/*.js')
+    .pipe(istanbul({
+      instrumenter: instrumenter
+    })) // Covering files
+    .pipe(istanbul.hookRequire()) // Force `require` to return covered files
+    .on('finish', function () {
+      gulp.src(['test/**/*.js'])
+        .pipe(mocha())
+        .pipe(istanbul.writeReports()) 
+        .pipe(istanbul.enforceThresholds({ thresholds: { global: 0 } })) 
+        .on('end', cb);
+    });
 });
 
 gulp.task('test', ['lint', 'mocha']);
