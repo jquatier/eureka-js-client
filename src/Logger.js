@@ -33,7 +33,7 @@ export class Logger {
     return this._log('error', arguments);
   }
   warn() {
-    return this._log('ward', arguments);
+    return this._log('warn', arguments);
   }
   info() {
     return this._log('info', arguments);
