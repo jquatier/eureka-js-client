@@ -7,8 +7,6 @@ import {parallel} from 'async';
 
 import {Logger} from './Logger.js';
 
-const logger = new Logger();
-
 const noop = () => {};
 
 /*
@@ -29,7 +27,7 @@ export class Eureka {
 
   constructor(config) {
     // Allow passing in a custom logger:
-    this.logger = logger || config.logger;
+    this.logger = config.logger || new Logger();
 
     this.logger.debug('initializing eureka client');
 
