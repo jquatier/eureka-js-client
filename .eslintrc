@@ -3,5 +3,9 @@
   "rules": {
     "indent": [2, 2],
     "no-trailing-spaces": 0
+  },
+  "env": {
+    "mocha": true,
+    "node": true
   }
 }
