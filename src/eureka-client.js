@@ -204,7 +204,7 @@ export class Eureka {
     if (!registry) {
       throw new Error('Unable to transform empty registry');
     }
-    if(registry.length) {
+    if (registry.length) {
       for (let i = 0; i < registry.applications.application.length; i++) {
         const app = registry.applications.application[i];
         this.cache.app[app.name.toUpperCase()] = app.instance;

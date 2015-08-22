@@ -20,7 +20,10 @@ describe('eureka client', () => {
         return new Eureka({
           instance: {
             vipAddress: true,
-            port: true
+            port: true,
+            dataCenterInfo: {
+              name: 'MyOwn'
+            }
           },
           eureka: {
             host: true,
@@ -34,7 +37,10 @@ describe('eureka client', () => {
           instance: {
             app: true,
             vipAddress: true,
-            port: true
+            port: true,
+            dataCenterInfo: {
+              name: 'MyOwn'
+            }
           },
           eureka: {
             host: true,
