@@ -3,10 +3,13 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import merge from 'deepmerge';
 import path from 'path';
+import {parallel} from 'async';
 
 import {Logger} from './Logger.js';
 
 const logger = new Logger();
+
+const noop = () => {};
 
 /*
   Eureka JS client
@@ -71,10 +74,15 @@ export class Eureka {
     return this.config.instance.hostName;
   }
 
-  start(callback) {
-    // TODO: asymc parallel this
-    this.register();
-    this.fetchRegistry();
+  start(callback = noop) {
+    parallel([
+      done => {
+        this.register(done);
+      },
+      done => {
+        this.fetchRegistry(done);
+      }
+    ], callback);
   }
 
   validateConfig(config) {
@@ -94,7 +102,7 @@ export class Eureka {
   /*
     Registers with the Eureka server and initializes heartbeats on registration success.
   */
-  register(callback) {
+  register(callback = noop) {
     this.config.instance.status = 'UP';
     request.post({
       url: this.eurekaUrl + this.config.instance.app, 
@@ -105,12 +113,11 @@ export class Eureka {
         this.logger.debug('registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
         this.startHeartbeats();
         this.startRegistryFetches();
-        return callback();
+        return callback(null);
       } else if (error) {
-        throw error;
-      } else {
-        throw new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`);
+        return callback(error);
       }
+      return callback(new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`));
     });
   }
 
@@ -175,7 +182,7 @@ export class Eureka {
   /*
     Retrieves all applications registered with the Eureka server
    */
-  fetchRegistry(callback) {
+  fetchRegistry(callback = noop) {
     request.get({
       url: this.eurekaUrl,
       headers: {
@@ -185,9 +192,9 @@ export class Eureka {
       if (!error && response.statusCode === 200) {
         this.logger.debug('retrieved registry successfully');
         this.transformRegistry(JSON.parse(body));
-        return callback();
+        return callback(null);
       }
-      throw new Error('Unable to retrieve registry from Eureka server');
+      callback(new Error('Unable to retrieve registry from Eureka server'));
     });
   }
 
