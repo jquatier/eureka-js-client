@@ -3,6 +3,11 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import merge from 'deepmerge';
 import path from 'path';
+import {parallel} from 'async';
+
+import {Logger} from './Logger.js';
+
+const noop = () => {};
 
 /*
   Eureka JS client
@@ -18,10 +23,13 @@ function getYaml(file) {
   return yml;
 }
 
-export default class Eureka {
+export class Eureka {
 
   constructor(config) {
-    console.log('initializing eureka client');
+    // Allow passing in a custom logger:
+    this.logger = config.logger || new Logger();
+
+    this.logger.debug('initializing eureka client');
 
     // Load in the base configuration:
     this.config = getYaml(path.join(__dirname, 'default-config.yml'));
@@ -40,72 +48,10 @@ export default class Eureka {
     // Validate the provided the values we need:
     this.validateConfig(this.config);
 
-    this.registryCache = {};
-    this.registryCacheByVIP = {};
-    this.register();
-    this.fetchRegistry();
-  }
-
-  validateConfig(config) {
-    function validate(namespace, key) {
-      if (!config[namespace][key]) {
-        throw new TypeError(`Missing "${namespace}.${key}" config value.`);
-      }
-    }
-
-    validate('instance', 'app');
-    validate('instance', 'vipAddress');
-    validate('instance', 'port');
-    validate('eureka', 'host');
-    validate('eureka', 'port');
-  }
-
-  /*
-    Registers with the Eureka server and initializes heartbeats on registration success.
-  */
-  register() {
-    this.config.instance.status = 'UP';
-    request.post({
-      url: this.eurekaUrl + this.config.instance.app, 
-      json: true,
-      body: {instance: this.config.instance}
-    }, (error, response, body) => {
-      if (!error && response.statusCode === 204) {
-        console.log('registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
-        this.startHeartbeats();
-        this.startRegistryFetches();
-      } else {
-        throw new Error('eureka registration FAILED: ' + (error ? error : `status: ${response.statusCode} body: ${body}`));
-      }
-    });
-  }
-
-  /*
-    Sets up heartbeats on interval for the life of the application.
-    Heartbeat interval by setting configuration property: eureka.heartbeatInterval
-  */
-  startHeartbeats() {
-    this.heartbeat = setInterval(() => {
-      request.put({
-        url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}` 
-      }, (error, response, body) => {
-        if (!error && response.statusCode === 200) {
-          console.log('eureka heartbeat success');
-        } else {
-          console.warn('eureka heartbeat FAILED, will retry. ' + (error ? error : `status: ${response.statusCode} body: ${body}`));
-        }
-      });
-    }, this.config.eureka.heartbeatInterval);
-  }
-
-  /*
-    Sets up registry fetches on interval for the life of the application.
-    Registry fetch interval setting configuration property: eureka.registryFetchInterval
-  */
-  startRegistryFetches() {
-    this.registryFetch = setInterval(() => {
-      this.fetchRegistry();
-    }, this.config.eureka.registryFetchInterval);
+    this.cache = {
+      app: {},
+      vip: {}
+    };
   }
 
   /*
@@ -126,14 +72,92 @@ export default class Eureka {
     return this.config.instance.hostName;
   }
 
+  start(callback = noop) {
+    parallel([
+      done => {
+        this.register(done);
+      },
+      done => {
+        this.fetchRegistry(done);
+      }
+    ], callback);
+  }
+
+  validateConfig(config) {
+    function validate(namespace, key) {
+      if (!config[namespace][key]) {
+        throw new TypeError(`Missing "${namespace}.${key}" config value.`);
+      }
+    }
+
+    validate('instance', 'app');
+    validate('instance', 'vipAddress');
+    validate('instance', 'port');
+    validate('eureka', 'host');
+    validate('eureka', 'port');
+  }
+
+  /*
+    Registers with the Eureka server and initializes heartbeats on registration success.
+  */
+  register(callback = noop) {
+    this.config.instance.status = 'UP';
+    request.post({
+      url: this.eurekaUrl + this.config.instance.app, 
+      json: true,
+      body: {instance: this.config.instance}
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 204) {
+        this.logger.debug('registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
+        this.startHeartbeats();
+        this.startRegistryFetches();
+        return callback(null);
+      } else if (error) {
+        return callback(error);
+      }
+      return callback(new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`));
+    });
+  }
+
+  /*
+    Sets up heartbeats on interval for the life of the application.
+    Heartbeat interval by setting configuration property: eureka.heartbeatInterval
+  */
+  startHeartbeats() {
+    this.heartbeat = setInterval(() => {
+      request.put({
+        url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}` 
+      }, (error, response, body) => {
+        if (!error && response.statusCode === 200) {
+          this.logger.debug('eureka heartbeat success');
+        } else {
+          if (error) {
+            this.logger.error('An error in the request occured.', error);
+          }
+          this.logger.warn('eureka heartbeat FAILED, will retry.', `status: ${response.statusCode} body: ${body}`);
+        }
+      });
+    }, this.config.eureka.heartbeatInterval);
+  }
+
+  /*
+    Sets up registry fetches on interval for the life of the application.
+    Registry fetch interval setting configuration property: eureka.registryFetchInterval
+  */
+  startRegistryFetches() {
+    this.registryFetch = setInterval(() => {
+      this.fetchRegistry();
+    }, this.config.eureka.registryFetchInterval);
+  }
+
   /*
     Retrieves a list of instances from Eureka server given an appId
   */
   getInstancesByAppId(appId) {
     if (!appId) {
-      throw new Error('Unable to query instances with no appId');
+      throw new RangeError('Unable to query instances with no appId');
     }
-    const instances = this.registryCache[appId.toUpperCase()];
+    const instances = this.cache.app[appId.toUpperCase()];
     if (!instances) {
       throw new Error(`Unable to retrieve instances for appId: ${appId}`);
     }
@@ -147,7 +171,7 @@ export default class Eureka {
     if (!vipAddress) {
       throw new Error('Unable to query instances with no vipAddress');
     }
-    const instances = this.registryCacheByVIP[vipAddress];
+    const instances = this.cache.vip[vipAddress];
     if (!instances) {
       throw new Error(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
@@ -156,17 +180,19 @@ export default class Eureka {
   /*
     Retrieves all applications registered with the Eureka server
    */
-  fetchRegistry() {
+  fetchRegistry(callback = noop) {
     request.get({
       url: this.eurekaUrl,
-      headers: {Accept: 'application/json'}
+      headers: {
+        Accept: 'application/json'
+      }
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
-        console.log('retrieved registry successfully');
+        this.logger.debug('retrieved registry successfully');
         this.transformRegistry(JSON.parse(body));
-      } else {
-        throw new Error('Unable to retrieve registry from Eureka server');
+        return callback(null);
       }
+      callback(new Error('Unable to retrieve registry from Eureka server'));
     });
   }
 
@@ -180,14 +206,14 @@ export default class Eureka {
 
     for (let i = 0; i < registry.applications.application.length; i++) {
       const app = registry.applications.application[i];
-      this.registryCache[app.name.toUpperCase()] = app.instance;
+      this.cache.app[app.name.toUpperCase()] = app.instance;
       let vipAddress;
       if (app.instance.length) {
         vipAddress = app.instance[0].vipAddress;
       } else {
         vipAddress = app.instance.vipAddress;
       }
-      this.registryCacheByVIP[vipAddress] = app.instance;
+      this.cache.vip[vipAddress] = app.instance;
     }
   }
 

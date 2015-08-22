@@ -2,7 +2,8 @@
   "extends": "xo/esnext",
   "rules": {
     "indent": [2, 2],
-    "no-trailing-spaces": 0
+    "no-trailing-spaces": 0,
+    "prefer-reflect": 0
   },
   "env": {
     "mocha": true,
