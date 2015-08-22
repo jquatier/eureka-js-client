@@ -66,7 +66,7 @@ export class Eureka {
     instance-id in the metadata. Else, it's the hostName.
   */
   get instanceId() {
-    if (this.config.instance.dataCenterInfo.toLowercase() === 'amazon') {
+    if (this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon') {
       return this.config.instance.dataCenterInfo.metadata['instance-id'];
     }
     return this.config.instance.hostName;
@@ -93,6 +93,7 @@ export class Eureka {
     validate('instance', 'app');
     validate('instance', 'vipAddress');
     validate('instance', 'port');
+    validate('instance', 'dataCenterInfo');
     validate('eureka', 'host');
     validate('eureka', 'port');
   }
@@ -203,17 +204,18 @@ export class Eureka {
     if (!registry) {
       throw new Error('Unable to transform empty registry');
     }
-
-    for (let i = 0; i < registry.applications.application.length; i++) {
-      const app = registry.applications.application[i];
-      this.cache.app[app.name.toUpperCase()] = app.instance;
-      let vipAddress;
-      if (app.instance.length) {
-        vipAddress = app.instance[0].vipAddress;
-      } else {
-        vipAddress = app.instance.vipAddress;
+    if(registry.length) {
+      for (let i = 0; i < registry.applications.application.length; i++) {
+        const app = registry.applications.application[i];
+        this.cache.app[app.name.toUpperCase()] = app.instance;
+        let vipAddress;
+        if (app.instance.length) {
+          vipAddress = app.instance[0].vipAddress;
+        } else {
+          vipAddress = app.instance.vipAddress;
+        }
+        this.cache.vip[vipAddress] = app.instance;
       }
-      this.cache.vip[vipAddress] = app.instance;
     }
   }
 
