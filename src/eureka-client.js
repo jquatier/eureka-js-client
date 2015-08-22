@@ -10,38 +10,54 @@ import path from 'path';
   for reporting instance health.
 */
 
+function getYaml(file) {
+  let yml = {};
+  try {
+    yml = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
+  } catch(e) {}
+  return yml;
+}
+
 export default class Eureka {
 
   constructor(config) {
     console.log('initializing eureka client');
-    this.config = config;
-    if (!config) {
-      // Load up the current working directory and the environment:
-      const cwd = process.cwd();
-      const env = process.env.NODE_ENV || 'development';
 
-      // Attempt to load the config file:
-      try {
-        config = yaml.safeLoad(fs.readFileSync(path.join(cwd, 'eureka-client.yml'), 'utf8'));
-      } catch(e) {}
+    // Load in the base configuration:
+    this.config = getYaml(path.join(__dirname, 'default-config.yml'));
 
-      try {
-        const envConfig = yaml.safeLoad(fs.readFileSync(path.join(cwd, `eureka-client-${env}.yml`), 'utf8'));
-        config = merge(config, envConfig);
-      } catch(e) {}
+    // Load up the current working directory and the environment:
+    const cwd = process.cwd();
+    const env = process.env.NODE_ENV || 'development';
 
-      this.config = config;
-    }
-    if (!this.config) {
-      throw new Error('missing configuration file.');
-    }
-    if (!this.config.instance || !this.config.eureka) {
-      throw new Error('missing instance / eureka configuration.');
-    }
+    // Load in the config files:
+    this.config = merge(this.config, getYaml(path.join(cwd, 'eureka-client.yml')));
+    this.config = merge(this.config, getYaml(path.join(cwd, `eureka-client-${env}.yml`)));
+
+    // Finally, merge in the passed configuration:
+    this.config = merge(this.config, config);
+
+    // Validate the provided the values we need:
+    this.validateConfig(this.config);
+
     this.registryCache = {};
     this.registryCacheByVIP = {};
     this.register();
     this.fetchRegistry();
+  }
+
+  validateConfig(config) {
+    function validate(namespace, key) {
+      if (!config[namespace][key]) {
+        throw new TypeError(`Missing "${namespace}.${key}" config value.`);
+      }
+    }
+
+    validate('instance', 'app');
+    validate('instance', 'vipAddress');
+    validate('instance', 'port');
+    validate('eureka', 'host');
+    validate('eureka', 'port');
   }
 
   /*
@@ -79,7 +95,7 @@ export default class Eureka {
           console.warn('eureka heartbeat FAILED, will retry. ' + (error ? error : `status: ${response.statusCode} body: ${body}`));
         }
       });
-    }, this.config.eureka.heartbeatInterval || 30000);
+    }, this.config.eureka.heartbeatInterval);
   }
 
   /*
@@ -89,7 +105,7 @@ export default class Eureka {
   startRegistryFetches() {
     this.registryFetch = setInterval(() => {
       this.fetchRegistry();
-    }, this.config.eureka.registryFetchInterval || 30000);
+    }, this.config.eureka.registryFetchInterval);
   }
 
   /*
