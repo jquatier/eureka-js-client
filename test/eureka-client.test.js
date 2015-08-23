@@ -127,7 +127,7 @@ describe('Eureka client', () => {
       client = new Eureka(config);
     });
 
-    it('should throw an exception if no vipAddress is provided', () => {
+    it('should throw an exception if no appId is provided', () => {
       function noAppId() {
         client.getInstancesByAppId();
       }
@@ -142,7 +142,7 @@ describe('Eureka client', () => {
       expect(actualInstances).to.equal(expectedInstances);
     });
 
-    it('should throw an error if no instances were found for given vipAddress', () => {
+    it('should throw an error if no instances were found for given appId', () => {
       let appId = 'theservicename'.toUpperCase();
       client.cache.app[appId] = null;
       function shouldThrow() {
@@ -164,11 +164,11 @@ describe('Eureka client', () => {
       client = new Eureka(config);
     });
 
-    it('should throw an exception if no appId is provided', () => {
-      function noAppId() {
+    it('should throw an exception if no vipAddress is provided', () => {
+      function noVipAddress() {
         client.getInstancesByVipAddress();
       }
-      expect(noAppId).to.throw(Error);
+      expect(noVipAddress).to.throw(Error);
     });
 
     it('should return a list of instances if vipAddress is registered', () => {
