@@ -5,13 +5,11 @@ var eslint = require('gulp-eslint');
 var instrumenter = require('babel-istanbul').Instrumenter;
 var istanbul = require('gulp-istanbul');
 var mochaBabel = require('babel/register');
-var es = require('event-stream');
 
 gulp.task('build', function() {
-  return es.merge(
-    gulp.src('src/**/*.js').pipe(babel()),
-    gulp.src('src/default-config.yml')
-  ).pipe(gulp.dest('lib'));
+  return gulp.src('src/**/*.js')
+    .pipe(babel())
+    .pipe(gulp.dest('lib'));
 });
 
 gulp.task('lint', function() {
