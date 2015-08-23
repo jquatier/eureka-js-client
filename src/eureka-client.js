@@ -109,7 +109,7 @@ export class Eureka {
       body: {instance: this.config.instance}
     }, (error, response, body) => {
       if (!error && response.statusCode === 204) {
-        this.logger.debug('registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
+        this.logger.info('registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
         this.startHeartbeats();
         this.startRegistryFetches();
         return callback(null);

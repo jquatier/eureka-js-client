@@ -9,7 +9,7 @@ const DEFAULT_LEVEL = LEVELS.info;
 
 export class Logger {
   constructor() {
-    this._level = 10;
+    this._level = DEFAULT_LEVEL;
   }
 
   level(val) {
@@ -24,8 +24,8 @@ export class Logger {
 
   // Abstract the console call:
   _log(method, args) {
-    if (this._level >= LEVELS[method]) {
-      console[method](...args);
+    if (this._level <= LEVELS[method === 'log' ? 'debug' : method]) {
+      console[method].apply(null, args);
     }
   }
 
