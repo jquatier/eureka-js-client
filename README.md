@@ -1,7 +1,7 @@
-# eureka-js-client [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client) [![Coverage Status](https://coveralls.io/repos/jquatier/eureka-js-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/jquatier/eureka-js-client?branch=master) [![Dependency Status](https://david-dm.org/jquatier/eureka-js-client.svg)](https://david-dm.org/jquatier/eureka-js-client)
-JS implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.
+# eureka-js-client 
+[![npm version](https://badge.fury.io/js/eureka-js-client.svg)](http://badge.fury.io/js/eureka-js-client) [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client) [![Coverage Status](https://coveralls.io/repos/jquatier/eureka-js-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/jquatier/eureka-js-client?branch=master) [![Dependency Status](https://david-dm.org/jquatier/eureka-js-client.svg)](https://david-dm.org/jquatier/eureka-js-client)
 
-[![NPM](https://nodei.co/npm/eureka-js-client.png)](https://nodei.co/npm/eureka-js-client/)
+JS implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.
 
 ## Usage
 
@@ -16,7 +16,7 @@ npm install eureka-js-client --save
 The Eureka module exports a JavaScript function that can be constructed.
 
 ```javascript
-var Eureka = require('eureka-js-client');
+var Eureka = require('eureka-js-client').Eureka;
 
 // example configuration
 var client = new Eureka({
@@ -42,6 +42,12 @@ var client = new Eureka({
 The Eureka client searches for the YAML file `eureka-client.yml` in the current working directory. It further searches for environment specific overrides in the environment specific YAML files. The environment is typically `test` or `production`, and is determined by the `NODE_ENV` environment variable.
 
 The options passed to the constructor overwrite any values that are set in configuration files.
+
+### Register with Eureka & start application heartbeats
+
+```javascript
+client.start();
+```
 
 ### Get Instances By App ID
 

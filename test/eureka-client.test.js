@@ -1,6 +1,6 @@
 import sinon from 'sinon';
 import {expect} from 'chai';
-import Eureka from '../src/eureka-client';
+import {Eureka} from '../src/eureka-client';
 
 describe('eureka client', () => {
   describe('Eureka()', () => {
@@ -12,9 +12,6 @@ describe('eureka client', () => {
     });
 
     it('should construct with the correct configuration values', () => {
-      const registerStub = sinon.stub(Eureka.prototype, 'register');
-      const fetchStub = sinon.stub(Eureka.prototype, 'fetchRegistry'); 
-
       function shouldThrow() {
         return new Eureka();
       }
@@ -23,7 +20,10 @@ describe('eureka client', () => {
         return new Eureka({
           instance: {
             vipAddress: true,
-            port: true
+            port: true,
+            dataCenterInfo: {
+              name: 'MyOwn'
+            }
           },
           eureka: {
             host: true,
@@ -37,7 +37,10 @@ describe('eureka client', () => {
           instance: {
             app: true,
             vipAddress: true,
-            port: true
+            port: true,
+            dataCenterInfo: {
+              name: 'MyOwn'
+            }
           },
           eureka: {
             host: true,
@@ -49,9 +52,6 @@ describe('eureka client', () => {
       expect(shouldThrow).to.throw();
       expect(noApp).to.throw(/app/);
       expect(shouldWork).to.not.throw();
-
-      registerStub.restore();
-      fetchStub.restore();
     });
   });
 });
