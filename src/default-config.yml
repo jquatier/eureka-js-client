@@ -1,6 +1,0 @@
-# Default configuration values:
-eureka:
-  heartbeatInterval: 30000
-  registryFetchInterval: 30000
-  
-instance: {}

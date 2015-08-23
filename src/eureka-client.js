@@ -5,7 +5,8 @@ import merge from 'deepmerge';
 import path from 'path';
 import {parallel} from 'async';
 
-import {Logger} from './Logger.js';
+import {Logger} from './Logger';
+import defaultConfig from './default-config';
 
 const noop = () => {};
 
@@ -31,15 +32,12 @@ export class Eureka {
 
     this.logger.debug('initializing eureka client');
 
-    // Load in the base configuration:
-    this.config = getYaml(path.join(__dirname, 'default-config.yml'));
-
     // Load up the current working directory and the environment:
     const cwd = process.cwd();
     const env = process.env.NODE_ENV || 'development';
 
-    // Load in the config files:
-    this.config = merge(this.config, getYaml(path.join(cwd, 'eureka-client.yml')));
+    // Load in the configuration files:
+    this.config = merge(defaultConfig, getYaml(path.join(cwd, 'eureka-client.yml')));
     this.config = merge(this.config, getYaml(path.join(cwd, `eureka-client-${env}.yml`)));
 
     // Finally, merge in the passed configuration:
