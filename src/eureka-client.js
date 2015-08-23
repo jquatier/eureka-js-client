@@ -170,12 +170,13 @@ export class Eureka {
    */
   getInstancesByVipAddress(vipAddress) {
     if (!vipAddress) {
-      throw new Error('Unable to query instances with no vipAddress');
+      throw new RangeError('Unable to query instances with no vipAddress');
     }
     const instances = this.cache.vip[vipAddress];
     if (!instances) {
       throw new Error(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
+    return instances;
   }
 
   /*
@@ -204,18 +205,16 @@ export class Eureka {
     if (!registry) {
       throw new Error('Unable to transform empty registry');
     }
-    if (registry.length) {
-      for (let i = 0; i < registry.applications.application.length; i++) {
-        const app = registry.applications.application[i];
-        this.cache.app[app.name.toUpperCase()] = app.instance;
-        let vipAddress;
-        if (app.instance.length) {
-          vipAddress = app.instance[0].vipAddress;
-        } else {
-          vipAddress = app.instance.vipAddress;
-        }
-        this.cache.vip[vipAddress] = app.instance;
+    for (let i = 0; i < registry.applications.application.length; i++) {
+      const app = registry.applications.application[i];
+      this.cache.app[app.name.toUpperCase()] = app.instance;
+      let vipAddress;
+      if (app.instance.length) {
+        vipAddress = app.instance[0].vipAddress;
+      } else {
+        vipAddress = app.instance.vipAddress;
       }
+      this.cache.vip[vipAddress] = app.instance;
     }
   }
 
