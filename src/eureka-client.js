@@ -205,17 +205,32 @@ export class Eureka {
     if (!registry) {
       throw new Error('Unable to transform empty registry');
     }
-    for (let i = 0; i < registry.applications.application.length; i++) {
-      const app = registry.applications.application[i];
-      this.cache.app[app.name.toUpperCase()] = app.instance;
-      let vipAddress;
-      if (app.instance.length) {
-        vipAddress = app.instance[0].vipAddress;
-      } else {
-        vipAddress = app.instance.vipAddress;
-      }
-      this.cache.vip[vipAddress] = app.instance;
+    this.cache = {app: {}, vip: {}};
+    if (!registry.applications.application) {
+      return;
     }
+    if (registry.applications.application.length) {
+      for (let i = 0; i < registry.applications.application.length; i++) {
+        const app = registry.applications.application[i];
+        this.transformApp(app);
+      }
+    } else {
+      this.transformApp(registry.applications.application);
+    }
+  }
+
+  /*
+    Transforms the given application and places in client cache
+   */
+  transformApp(app) {
+    this.cache.app[app.name.toUpperCase()] = app.instance;
+    let vipAddress;
+    if (app.instance.length) {
+      vipAddress = app.instance[0].vipAddress;
+    } else {
+      vipAddress = app.instance.vipAddress;
+    }
+    this.cache.vip[vipAddress] = app.instance;
   }
 
 }

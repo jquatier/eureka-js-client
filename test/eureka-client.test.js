@@ -193,21 +193,22 @@ describe('Eureka client', () => {
   describe('transformRegistry()', () => {
 
     let client, config, registry, vipAddress,
-      appName, instance, instance2, vipAddress2;
+      appName, appName2, app1, app2, instance, instance2, vipAddress2;
     beforeEach(() => {
       config = {
         instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: 'Amazon'},
         eureka: {host: '127.0.0.1', port: 9999}
       };
-      appName = 'thename'.toUpperCase();
+      appName = 'theName'.toUpperCase();
+      appName2 = 'theNam2'.toUpperCase();
+      app1 = {name: appName};
+      app2 = {name: appName2};
       vipAddress = 'theVip';
       vipAddress2 = 'theVip2';
       instance = {host: '127.0.0.1', vipAddress: vipAddress};
       instance2 = {host: '127.0.0.2', vipAddress: vipAddress2};
       registry = {
-        applications: {
-          application: [{name: appName}]
-        }
+        applications: {application: {}}
       };
       client = new Eureka(config);
     });
@@ -219,20 +220,34 @@ describe('Eureka client', () => {
       expect(noRegistry).to.throw();
     });
 
+    it('should return clear the cache if no applications exist', () => {
+      registry.applications.application = null;
+      client.transformRegistry(registry);
+      expect(client.cache.vip).to.be.empty;
+      expect(client.cache.app).to.be.empty;
+    });
+
     it('should transform a registry with apps with one instance', () => {
-      registry.applications.application[0].instance = instance;
+      registry.applications.application = app1;
+      registry.applications.application.instance = instance;
       client.transformRegistry(registry);
       expect(client.cache.app[appName].host).to.equal(instance.host);
       expect(client.cache.vip[vipAddress].vipAddress).to.equal(instance.vipAddress);
     });
 
     it('should transform a registry with apps with a list of instances', () => {
-      registry.applications.application[0].instance = [instance, instance2];
+      registry.applications.application = app1;
+      app1.instance = [instance, instance2];
       client.transformRegistry(registry);
-      expect(client.cache.vip[vipAddress].length).to.equal(2);
       expect(client.cache.app[appName].length).to.equal(2);
     });
 
+    it('should transform a registry with one app', () => {
+      registry.applications.application = app1;
+      app1.instance = instance;
+      client.transformRegistry(registry);
+      expect(client.cache.vip[vipAddress].host).to.equal(app1.instance.host);
+    });
   });
 
 });
