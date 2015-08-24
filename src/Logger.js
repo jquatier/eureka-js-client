@@ -25,7 +25,7 @@ export class Logger {
   // Abstract the console call:
   _log(method, args) {
     if (this._level <= LEVELS[method === 'log' ? 'debug' : method]) {
-      console[method].apply(null, args);
+      console[method](...args);
     }
   }
 
