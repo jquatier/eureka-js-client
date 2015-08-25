@@ -37,7 +37,7 @@ gulp.task('mocha', function (cb) {
 });
 
 gulp.task('integration', function(done) {
-  execFile(path.join(__dirname, 'docker_setup.sh'), function(err, stdout, stderr) {
+  execFile(path.join(__dirname, 'test', 'docker_setup.sh'), function(err, stdout, stderr) {
     if (stdout) {
       console.log(stdout);
     } else {
