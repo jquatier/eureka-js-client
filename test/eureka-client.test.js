@@ -192,25 +192,23 @@ describe('Eureka client', () => {
 
   describe('transformRegistry()', () => {
 
-    let client, config, registry, vipAddress,
-      appName, appName2, app1, app2, instance, instance2, vipAddress2;
+    let client, config, registry, app1, app2, transformSpy;
     beforeEach(() => {
       config = {
         instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: 'Amazon'},
         eureka: {host: '127.0.0.1', port: 9999}
       };
-      appName = 'theName'.toUpperCase();
-      appName2 = 'theNam2'.toUpperCase();
-      app1 = {name: appName};
-      app2 = {name: appName2};
-      vipAddress = 'theVip';
-      vipAddress2 = 'theVip2';
-      instance = {host: '127.0.0.1', vipAddress: vipAddress};
-      instance2 = {host: '127.0.0.2', vipAddress: vipAddress2};
       registry = {
         applications: {application: {}}
       };
+      app1 = {};
+      app2 = {};
       client = new Eureka(config);
+      transformSpy = sinon.stub(client, 'transformApp');
+    });
+
+    afterEach(() => {
+      transformSpy.restore();
     });
 
     it('should throw an error if no registry is provided', () => {
@@ -227,26 +225,47 @@ describe('Eureka client', () => {
       expect(client.cache.app).to.be.empty;
     });
 
-    it('should transform a registry with apps with one instance', () => {
-      registry.applications.application = app1;
-      registry.applications.application.instance = instance;
-      client.transformRegistry(registry);
-      expect(client.cache.app[appName].host).to.equal(instance.host);
-      expect(client.cache.vip[vipAddress].vipAddress).to.equal(instance.vipAddress);
-    });
-
-    it('should transform a registry with apps with a list of instances', () => {
-      registry.applications.application = app1;
-      app1.instance = [instance, instance2];
-      client.transformRegistry(registry);
-      expect(client.cache.app[appName].length).to.equal(2);
-    });
-
     it('should transform a registry with one app', () => {
       registry.applications.application = app1;
-      app1.instance = instance;
       client.transformRegistry(registry);
-      expect(client.cache.vip[vipAddress].host).to.equal(app1.instance.host);
+      expect(transformSpy.callCount).to.equal(1);
+    });
+
+    it('should transform a registry with two or more apps', () => {
+      registry.applications.application = [app1, app2];
+      client.transformRegistry(registry);
+      expect(transformSpy.callCount).to.equal(2);
+    });
+
+  });
+
+  describe('transformApp()', () => {
+
+    let client, config, app, instance1, instance2, theVip;
+    beforeEach(() => {
+      config = {
+        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: 'Amazon'},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      client = new Eureka(config);
+      theVip = 'theVip';
+      instance1 = {host: '127.0.0.1', port: 1000, vipAddress: theVip};
+      instance2 = {host: '127.0.0.2', port: 2000, vipAddress: theVip};
+      app = {name: 'theapp'};
+    });
+
+    it('should transform an app with one instance', () => {
+      app.instance = instance1;
+      client.transformApp(app);
+      expect(client.cache.app[app.name.toUpperCase()].length).to.equal(1);
+      expect(client.cache.vip[theVip].length).to.equal(1);
+    });
+
+    it('should transform an app with two or more instances', () => {
+      app.instance = [instance1, instance2];
+      client.transformApp(app);
+      expect(client.cache.app[app.name.toUpperCase()].length).to.equal(2);
+      expect(client.cache.vip[theVip].length).to.equal(2);
     });
   });
 
