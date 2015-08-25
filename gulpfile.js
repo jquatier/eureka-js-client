@@ -36,13 +36,14 @@ gulp.task('mocha', function (cb) {
     });
 });
 
-gulp.task('integration', function() {
+gulp.task('integration', function(done) {
   execFile(path.join(__dirname, 'docker_setup.sh'), function(err, stdout, stderr) {
     if (stdout) {
       console.log(stdout);
     } else {
       console.error(err || stderr);
     }
+    done();
   });
   // TODO: Run integration tests.
 });
