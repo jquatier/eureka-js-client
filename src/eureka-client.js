@@ -218,17 +218,18 @@ export class Eureka {
   }
 
   /*
-    Transforms the given application and places in client cache
+    Transforms the given application and places in client cache. If an application
+      has a single instance, the instance is placed into the cache as an array of one
    */
   transformApp(app) {
-    this.cache.app[app.name.toUpperCase()] = app.instance;
-    let vipAddress;
     if (app.instance.length) {
-      vipAddress = app.instance[0].vipAddress;
+      this.cache.app[app.name.toUpperCase()] = app.instance;
+      this.cache.vip[app.instance[0].vipAddress] = app.instance;
     } else {
-      vipAddress = app.instance.vipAddress;
+      const instances = [app.instance];
+      this.cache.vip[app.instance.vipAddress] = instances;
+      this.cache.app[app.name.toUpperCase()] = instances;
     }
-    this.cache.vip[vipAddress] = app.instance;
   }
 
 }
