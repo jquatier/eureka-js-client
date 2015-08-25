@@ -5,6 +5,7 @@ var eslint = require('gulp-eslint');
 var instrumenter = require('babel-istanbul').Instrumenter;
 var istanbul = require('gulp-istanbul');
 var mochaBabel = require('babel/register');
+var exec = require('child_process').exec;
 
 gulp.task('build', function() {
   return gulp.src('src/**/*.js')
@@ -32,6 +33,14 @@ gulp.task('mocha', function (cb) {
         .pipe(istanbul.enforceThresholds({ thresholds: { global: 0 } })) 
         .on('end', cb);
     });
+});
+
+gulp.task('integration', function() {
+  exec('docker pull netflixoss/eureka:1.1.147');
+  exec('docker run -d --name eureka -d netflixoss/eureka:1.1.147');
+  exec('docker ps -a');
+
+  // TODO: Run integration tests.
 });
 
 gulp.task('test', ['lint', 'mocha']);
