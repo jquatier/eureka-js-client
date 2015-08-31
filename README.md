@@ -49,6 +49,12 @@ The options passed to the constructor overwrite any values that are set in confi
 client.start();
 ```
 
+### De-register with Eureka & stop application heartbeats
+
+```javascript
+client.stop();
+```
+
 ### Get Instances By App ID
 
 ```javascript

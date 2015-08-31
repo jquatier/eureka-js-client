@@ -1,5 +1,10 @@
 import sinon from 'sinon';
+import chai from 'chai';
 import {expect} from 'chai';
+import sinonChai from 'sinon-chai';
+chai.use(sinonChai);
+
+import request from 'request';
 import {Eureka} from '../src/eureka-client';
 
 describe('Eureka client', () => {
@@ -54,6 +59,59 @@ describe('Eureka client', () => {
       expect(noApp).to.throw(/app/);
       expect(shouldWork).to.not.throw();
     });
+  });
+
+  describe('register()', () => { 
+
+    it('should call register URI with correct arguments', () => {
+      let config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      let client = new Eureka(config);
+      let postSpy = sinon.stub(request, 'post');
+
+      client.register(sinon.spy());
+
+      expect(postSpy).to.have.been.calledWithMatch({ 
+        body: {
+          instance: {
+            app: 'app',
+            hostName: 'myhost',
+            dataCenterInfo: { name: 'MyOwn' },
+            port: 9999,
+            status: 'UP',
+            vipAddress: '1.2.2.3'
+          }
+        },
+        json: true,
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/app'
+      });
+
+      postSpy.restore();
+    });
+
+  });
+
+  describe('deregister()', () => { 
+
+    it('should call deregister URI with correct arguments', () => {
+      let config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      let client = new Eureka(config);
+      let delSpy = sinon.stub(request, 'del');
+
+      client.deregister(sinon.spy());
+
+      expect(delSpy).to.have.been.calledWithMatch({ 
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost'
+      });
+
+      delSpy.restore();
+    });
+
   });
 
   describe('validateConfig()', () => {

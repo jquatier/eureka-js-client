@@ -42,6 +42,7 @@
     "gulp-eslint": "^1.0.0",
     "gulp-istanbul": "^0.10.0",
     "gulp-mocha": "^2.1.3",
-    "sinon": "^1.15.4"
+    "sinon": "^1.15.4",
+    "sinon-chai": "^2.8.0"
   }
 }
