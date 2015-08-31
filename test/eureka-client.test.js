@@ -1,11 +1,11 @@
 import sinon from 'sinon';
 import chai from 'chai';
-import {expect} from 'chai';
 import sinonChai from 'sinon-chai';
-chai.use(sinonChai);
-
 import request from 'request';
 import {Eureka} from '../src/eureka-client';
+
+let expect = chai.expect;
+chai.use(sinonChai);
 
 describe('Eureka client', () => {
 
