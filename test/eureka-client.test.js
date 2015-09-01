@@ -61,19 +61,109 @@ describe('Eureka client', () => {
     });
   });
 
-  describe('register()', () => { 
+  describe('get instanceId()', () => { 
 
-    it('should call register URI with correct arguments', () => {
+    it('should return hostname for non-AWS datacenters', () => {
       let config = {
         instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
         eureka: {host: '127.0.0.1', port: 9999}
       };
       let client = new Eureka(config);
-      let postSpy = sinon.stub(request, 'post');
+      expect(client.instanceId).to.equal('myhost');
+    });
 
-      client.register(sinon.spy());
+    it('should return instance ID for AWS datacenters', () => {
+      let config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'Amazon', metadata: {'instance-id': 'i123'}}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      let client = new Eureka(config);
+      expect(client.instanceId).to.equal('i123');
+    });
 
-      expect(postSpy).to.have.been.calledWithMatch({ 
+  });
+
+  describe('start()', () => { 
+
+    let config, client, registerSpy, fetchRegistrySpy;
+    before(() => {
+      config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      client = new Eureka(config);
+      registerSpy = sinon.stub(client, 'register').callsArg(0);
+      fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
+    });
+
+    after(() => {
+      registerSpy.restore();
+      fetchRegistrySpy.restore();
+    });
+
+    it('should call register and fetch registry', () => {
+      let startCb = sinon.spy();
+      client.start(startCb);
+
+      expect(registerSpy).to.have.been.calledOnce;
+      expect(fetchRegistrySpy).to.have.been.calledOnce;
+      expect(startCb).to.have.been.calledOnce;
+    });
+
+  });
+
+  describe('stop()', () => { 
+
+    let config, client, deregisterSpy;
+    before(() => {
+      config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      client = new Eureka(config);
+      deregisterSpy = sinon.stub(client, 'deregister').callsArg(0);
+    });
+
+    after(() => {
+      deregisterSpy.restore();
+    });
+
+    it('should call deregister', () => {
+      let stopCb = sinon.spy();
+      client.stop(stopCb);
+
+      expect(deregisterSpy).to.have.been.calledOnce;
+      expect(stopCb).to.have.been.calledOnce;
+    });
+
+  });
+
+  describe('register()', () => { 
+
+    let config, client, heartbeatsSpy, registryFetchSpy;
+    beforeEach(() => {
+      config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      client = new Eureka(config);
+      heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
+      registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
+    });
+
+    afterEach(() => {
+      request.post.restore();
+      heartbeatsSpy.restore();
+      registryFetchSpy.restore();
+    });
+
+    it('should call register URI, and initiate heartbeats / registry fetches', () => {
+      
+      sinon.stub(request, 'post').yields(null, {statusCode: 204}, null)
+      let registerCb = sinon.spy();
+      client.register(registerCb);
+
+      expect(request.post).to.have.been.calledWithMatch({ 
         body: {
           instance: {
             app: 'app',
@@ -88,31 +178,89 @@ describe('Eureka client', () => {
         url: 'http://127.0.0.1:9999/eureka/v2/apps/app'
       });
 
-      postSpy.restore();
+      expect(heartbeatsSpy).to.have.been.calledOnce;
+      expect(registryFetchSpy).to.have.been.calledOnce;
+      expect(registerCb).to.have.been.calledWithMatch(null);
+
+    });
+
+    it('should throw error for non-204 response', () => {
+      
+      sinon.stub(request, 'post').yields(null, {statusCode: 500}, null);
+      let registerCb = sinon.spy();
+      client.register(registerCb);
+
+      expect(registerCb).to.have.been.calledWithMatch({message:'eureka registration FAILED: status: 500 body: null'});
+
+      expect(heartbeatsSpy).to.have.callCount(0);
+      expect(registryFetchSpy).to.have.callCount(0);
+
+    });
+
+    it('should throw error for request error', () => {
+      
+      sinon.stub(request, 'post').yields(new Error('request error'), null, null);
+      let registerCb = sinon.spy();
+      client.register(registerCb);
+
+      expect(registerCb).to.have.been.calledWithMatch({message:'request error'});
+
+      expect(heartbeatsSpy).to.have.callCount(0);
+      expect(registryFetchSpy).to.have.callCount(0);
+
     });
 
   });
 
   describe('deregister()', () => { 
 
-    it('should call deregister URI with correct arguments', () => {
-      let config = {
+    let config, client;
+    beforeEach(() => {
+      config = {
         instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
         eureka: {host: '127.0.0.1', port: 9999}
       };
-      let client = new Eureka(config);
-      let delSpy = sinon.stub(request, 'del');
+      client = new Eureka(config);
+    });
 
-      client.deregister(sinon.spy());
+    afterEach(() => {
+      request.del.restore();
+    });
 
-      expect(delSpy).to.have.been.calledWithMatch({ 
+    it('should call deregister URI', () => {
+      sinon.stub(request, 'del').yields(null, {statusCode: 200}, null);;
+      let deregisterCb = sinon.spy();
+      client.deregister(deregisterCb);
+
+      expect(request.del).to.have.been.calledWithMatch({ 
         url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost'
       });
 
-      delSpy.restore();
+      expect(deregisterCb).to.have.been.calledWithMatch(null);
+
+    });
+
+    it('should throw error for non-200 response', () => {
+      sinon.stub(request, 'del').yields(null, {statusCode: 500}, null);;
+      let deregisterCb = sinon.spy();
+      client.deregister(deregisterCb);
+
+      expect(deregisterCb).to.have.been.calledWithMatch({message:'eureka deregistration FAILED: status: 500 body: null'});
+
+    });
+
+    it('should throw error for request error', () => {
+      sinon.stub(request, 'del').yields(new Error('request error'), null, null);
+      let deregisterCb = sinon.spy();
+      client.deregister(deregisterCb);
+
+      expect(deregisterCb).to.have.been.calledWithMatch({message:'request error'});
+
     });
 
   });
+
+  
 
   describe('validateConfig()', () => {
 
@@ -244,6 +392,60 @@ describe('Eureka client', () => {
         client.getInstancesByVipAddress(vipAddress)
       }
       expect(shouldThrow).to.throw();
+    });
+
+  });
+
+  describe('fetchRegistry()', () => {
+
+    let config, client, transformRegistrySpy;
+    beforeEach(() => {
+      config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      client = new Eureka(config);
+      transformRegistrySpy = sinon.stub(client, 'transformRegistry');
+    });
+
+    afterEach(() => {
+      request.get.restore();
+      client.transformRegistry.restore();
+    });
+
+    it('should call registry URI', () => {
+      
+      sinon.stub(request, 'get').yields(null, {statusCode: 200}, null)
+      let registryCb = sinon.spy();
+      client.fetchRegistry(registryCb);
+
+      expect(request.get).to.have.been.calledWithMatch({ 
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        headers: { Accept: 'application/json' }
+      });
+
+      expect(registryCb).to.have.been.calledWithMatch(null);
+
+    });
+
+    it('should throw error for non-204 response', () => {
+      
+      sinon.stub(request, 'get').yields(null, {statusCode: 500}, null);
+      let registryCb = sinon.spy();
+      client.fetchRegistry(registryCb);
+
+      expect(registryCb).to.have.been.calledWithMatch({message:'Unable to retrieve registry from Eureka server'});
+
+    });
+
+    it('should throw error for request error', () => {
+      
+      sinon.stub(request, 'get').yields(new Error('request error'), null, null);
+      let registryCb = sinon.spy();
+      client.fetchRegistry(registryCb);
+
+      expect(registryCb).to.have.been.calledWithMatch({message:'Unable to retrieve registry from Eureka server'});
+
     });
 
   });
