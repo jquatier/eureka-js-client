@@ -5,7 +5,7 @@
   "main": "lib/eureka-client.js",
   "scripts": {
     "prepublish": "gulp",
-    "test": "gulp test",
+    "test": "gulp test && gulp integration",
     "coveralls": "cat ./coverage/lcov.info | coveralls && rm -rf ./coverage"
   },
   "repository": {

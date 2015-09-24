@@ -5,6 +5,8 @@ var eslint = require('gulp-eslint');
 var instrumenter = require('babel-istanbul').Instrumenter;
 var istanbul = require('gulp-istanbul');
 var mochaBabel = require('babel/register');
+var execFile = require('child_process').execFile;
+var path = require('path');
 
 gulp.task('build', function() {
   return gulp.src('src/**/*.js')
@@ -32,6 +34,22 @@ gulp.task('mocha', function (cb) {
         .pipe(istanbul.enforceThresholds({ thresholds: { global: 0 } })) 
         .on('end', cb);
     });
+});
+
+gulp.task('integration', function(done) {
+  execFile(path.join(__dirname, 'test', 'docker_setup.sh'), function(err, stdout, stderr) {
+    console.log('stdout: ', stdout);
+    console.error('stderr: ', stderr);
+    done();
+    return;
+    if (stdout) {
+      console.log(stdout);
+    } else {
+      console.error(err || stderr);
+    }
+    done();
+  });
+  // TODO: Run integration tests.
 });
 
 gulp.task('test', ['lint', 'mocha']);
