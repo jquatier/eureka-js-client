@@ -20,7 +20,7 @@ function getYaml(file) {
   let yml = {};
   try {
     yml = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
-  } catch(e) {}
+  } catch (e) {}
   return yml;
 }
 
@@ -56,7 +56,7 @@ export class Eureka {
     Base Eureka server URL + path
   */
   get eurekaUrl() {
-    return `http://${this.config.eureka.host}:${this.config.eureka.port}/eureka/v2/apps/`;
+    return `http://${this.config.eureka.host}:${this.config.eureka.port}${this.config.eureka.servicePath}`;
   }
 
   /*
