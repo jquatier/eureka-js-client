@@ -20,7 +20,7 @@ function getYaml(file) {
   let yml = {};
   try {
     yml = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
-  } catch(e) {}
+  } catch (e) {}
   return yml;
 }
 
