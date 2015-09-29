@@ -3,7 +3,7 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import merge from 'deepmerge';
 import path from 'path';
-import {parallel} from 'async';
+import {series} from 'async';
 
 import {Logger} from './Logger';
 import defaultConfig from './default-config';
@@ -71,7 +71,7 @@ export class Eureka {
   }
 
   start(callback = noop) {
-    parallel([
+    series([
       done => {
         this.register(done);
       },
@@ -124,19 +124,23 @@ export class Eureka {
   */
   startHeartbeats() {
     this.heartbeat = setInterval(() => {
-      request.put({
-        url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}` 
-      }, (error, response, body) => {
-        if (!error && response.statusCode === 200) {
-          this.logger.debug('eureka heartbeat success');
-        } else {
-          if (error) {
-            this.logger.error('An error in the request occured.', error);
-          }
-          this.logger.warn('eureka heartbeat FAILED, will retry.', `status: ${response.statusCode} body: ${body}`);
-        }
-      });
+      this.renew()
     }, this.config.eureka.heartbeatInterval);
+  }
+
+  renew() {
+    request.put({
+      url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}` 
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.debug('eureka heartbeat success');
+      } else {
+        if (error) {
+          this.logger.error('An error in the request occured.', error);
+        }
+        this.logger.warn('eureka heartbeat FAILED, will retry.', `status: ${response.statusCode} body: ${body}`);
+      }
+    });
   }
 
   /*
