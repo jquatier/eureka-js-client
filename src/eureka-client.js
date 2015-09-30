@@ -20,7 +20,7 @@ function getYaml(file) {
   let yml = {};
   try {
     yml = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
-  } catch(e) {}
+  } catch (e) {}
   return yml;
 }
 
@@ -56,7 +56,7 @@ export class Eureka {
     Base Eureka server URL + path
   */
   get eurekaUrl() {
-    return `http://${this.config.eureka.host}:${this.config.eureka.port}/eureka/v2/apps/`;
+    return `http://${this.config.eureka.host}:${this.config.eureka.port}${this.config.eureka.servicePath}`;
   }
 
   /*
@@ -70,6 +70,9 @@ export class Eureka {
     return this.config.instance.hostName;
   }
 
+  /*
+    Registers instance with Eureka, begins heartbeats, and fetches registry.
+  */
   start(callback = noop) {
     series([
       done => {
@@ -81,6 +84,18 @@ export class Eureka {
     ], callback);
   }
 
+  /*
+    De-registers instance with Eureka, stops heartbeats / registry fetches.
+  */
+  stop(callback = noop) {
+    this.deregister(callback);
+    clearInterval(this.heartbeat);
+    clearInterval(this.registryFetch);
+  }
+
+  /*
+    Validates client configuration.
+  */
   validateConfig(config) {
     function validate(namespace, key) {
       if (!config[namespace][key]) {
@@ -115,6 +130,23 @@ export class Eureka {
         return callback(error);
       }
       return callback(new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`));
+    });
+  }
+
+  /*
+    De-registers with the Eureka server and stops heartbeats.
+  */
+  deregister(callback = noop) {
+    request.del({
+      url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}` 
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.info('de-registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
+        return callback(null);
+      } else if (error) {
+        return callback(error);
+      }
+      return callback(new Error(`eureka deregistration FAILED: status: ${response.statusCode} body: ${body}`));
     });
   }
 
