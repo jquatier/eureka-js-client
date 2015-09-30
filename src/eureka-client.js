@@ -124,7 +124,7 @@ export class Eureka {
   */
   startHeartbeats() {
     this.heartbeat = setInterval(() => {
-      this.renew()
+      this.renew();
     }, this.config.eureka.heartbeatInterval);
   }
 
