@@ -101,13 +101,12 @@ describe('Eureka client', () => {
       fetchRegistrySpy.restore();
     });
 
-    it('should call register and fetch registry', () => {
-      let startCb = sinon.spy();
-      client.start(startCb);
-
-      expect(registerSpy).to.have.been.calledOnce;
-      expect(fetchRegistrySpy).to.have.been.calledOnce;
-      expect(startCb).to.have.been.calledOnce;
+    it('should call register and fetch registry', (done) => {
+      client.start(function() {
+        expect(registerSpy).to.have.been.calledOnce;
+        expect(fetchRegistrySpy).to.have.been.calledOnce;
+        done();
+      });
     });
 
   });
