@@ -443,7 +443,7 @@ describe('Eureka client', () => {
       let registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
-      expect(registryCb).to.have.been.calledWithMatch({message:'Unable to retrieve registry from Eureka server'});
+      expect(registryCb).to.have.been.calledWithMatch({message:'request error'});
 
     });
 
