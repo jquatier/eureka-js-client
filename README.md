@@ -69,7 +69,7 @@ var appInfo = client.getInstancesByAppId('YOURSERVICE');
 var appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
-### Debugging
+## Debugging
 
 The library uses [request](https://github.com/request/request) for all service calls, and debugging can be turned on by passing `NODE_DEBUG=request` when you start node. This allows you you double-check the URL being called as well as other request properties.
 

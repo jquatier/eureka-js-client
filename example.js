@@ -1,4 +1,4 @@
-var Eureka = require('eureka-js-client');
+var Eureka = require('eureka-js-client').Eureka;
 
 // example configuration
 var client = new Eureka({
