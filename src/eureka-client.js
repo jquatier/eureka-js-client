@@ -227,6 +227,8 @@ export class Eureka {
         this.logger.debug('retrieved registry successfully');
         this.transformRegistry(JSON.parse(body));
         return callback(null);
+      } else if (error) {
+        return callback(error);
       }
       callback(new Error('Unable to retrieve registry from Eureka server'));
     });

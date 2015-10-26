@@ -19,3 +19,7 @@ var client = new Eureka({
     port: 32768
   }
 });
+client.logger.level('debug');
+client.start(function(error){
+  console.log(error);
+});

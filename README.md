@@ -69,6 +69,20 @@ var appInfo = client.getInstancesByAppId('YOURSERVICE');
 var appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
+### Debugging
+
+The library uses [request](https://github.com/request/request) for all service calls, and debugging can be turned on by passing `NODE_DEBUG=request` when you start node. This allows you you double-check the URL being called as well as other request properties.
+
+```shell
+NODE_DEBUG=request node example.js
+```
+
+You can also turn on debugging within the library by setting the log level to debug:
+
+```javascript
+client.logger.level('debug');
+```
+
 ## Tests
 
 The test for the module are written using mocha and chai. To run the unit tests, you can use the gulp `test` task:
