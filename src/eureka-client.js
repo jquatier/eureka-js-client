@@ -12,7 +12,7 @@ const noop = () => {};
 
 /*
   Eureka JS client
-  This module handles registration with a Eureka server, as well as heartbeats 
+  This module handles registration with a Eureka server, as well as heartbeats
   for reporting instance health.
 */
 
@@ -60,7 +60,7 @@ export class Eureka {
   }
 
   /*
-    Helper method to get the instance ID. If the datacenter is AWS, this will be the 
+    Helper method to get the instance ID. If the datacenter is AWS, this will be the
     instance-id in the metadata. Else, it's the hostName.
   */
   get instanceId() {
@@ -79,7 +79,10 @@ export class Eureka {
         this.register(done);
       },
       done => {
-        this.fetchRegistry(done);
+        if (this.config.eureka.fetchRegistry) {
+          return this.fetchRegistry(done);
+        }
+        done();
       }
     ], callback);
   }
@@ -117,14 +120,16 @@ export class Eureka {
   register(callback = noop) {
     this.config.instance.status = 'UP';
     request.post({
-      url: this.eurekaUrl + this.config.instance.app, 
+      url: this.eurekaUrl + this.config.instance.app,
       json: true,
       body: {instance: this.config.instance}
     }, (error, response, body) => {
       if (!error && response.statusCode === 204) {
         this.logger.info('registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
         this.startHeartbeats();
-        this.startRegistryFetches();
+        if (this.config.eureka.fetchRegistry) {
+          this.startRegistryFetches();
+        }
         return callback(null);
       } else if (error) {
         return callback(error);
@@ -138,7 +143,7 @@ export class Eureka {
   */
   deregister(callback = noop) {
     request.del({
-      url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}` 
+      url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}`
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
         this.logger.info('de-registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
@@ -162,7 +167,7 @@ export class Eureka {
 
   renew() {
     request.put({
-      url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}` 
+      url: `${this.eurekaUrl}${this.config.instance.app}/${this.instanceId}`
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
         this.logger.debug('eureka heartbeat success');
