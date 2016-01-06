@@ -56,7 +56,7 @@ export class Eureka {
     Base Eureka server URL + path
   */
   get eurekaUrl() {
-    return `http://${this.config.eureka.host}:${this.config.eureka.port}${this.config.eureka.servicePath}`;
+    return `${this.config.eureka.ssl ? 'https' : 'http'}://${this.config.eureka.host}:${this.config.eureka.port}${this.config.eureka.servicePath}`;
   }
 
   /*

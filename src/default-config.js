@@ -5,7 +5,8 @@ export default {
     heartbeatInterval: 30000,
     registryFetchInterval: 30000,
     fetchRegistry: true,
-    servicePath: '/eureka/v2/apps/'
+    servicePath: '/eureka/v2/apps/',
+    ssl: false
   },
   instance: {}
 };
