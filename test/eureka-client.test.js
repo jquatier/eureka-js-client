@@ -259,7 +259,32 @@ describe('Eureka client', () => {
 
   });
 
-  
+  describe('renew()', () => {
+
+    let config, client;
+    beforeEach(() => {
+      config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      client = new Eureka(config);
+    });
+
+    afterEach(() => {
+      request.put.restore();
+    });
+
+    it('should call heartbeat URI', () => {
+      sinon.stub(request, 'put').yields(null, {statusCode: 200}, null)
+      client.renew();
+
+      expect(request.put).to.have.been.calledWithMatch({
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost'
+      });
+
+    });
+
+  });
 
   describe('validateConfig()', () => {
 
@@ -427,7 +452,7 @@ describe('Eureka client', () => {
 
     });
 
-    it('should throw error for non-204 response', () => {
+    it('should throw error for non-200 response', () => {
       
       sinon.stub(request, 'get').yields(null, {statusCode: 500}, null);
       let registryCb = sinon.spy();
