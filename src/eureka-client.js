@@ -61,8 +61,8 @@ export class Eureka {
   }
 
   get eurekaHost() {
-    if(this.amazonDataCenter && this.config.eureka.useDns) {
-      this.locateEurekaHostUsingDns((resolvedHost) => {
+    if (this.amazonDataCenter && this.config.eureka.useDns) {
+      this.locateEurekaHostUsingDns(resolvedHost => {
         return resolvedHost;
       });
     } else {
@@ -301,19 +301,19 @@ export class Eureka {
     Naming convention: txt.<REGION>.<HOST>
    */
   locateEurekaHostUsingDns(callback = noop) {
-    if(!this.config.eureka.ec2Region) {
-      throw new Error('EC2 region was undefined. config.eureka.ec2Region must be set to resolve Eureka using DNS records.')
+    if (!this.config.eureka.ec2Region) {
+      throw new Error('EC2 region was undefined. config.eureka.ec2Region must be set to resolve Eureka using DNS records.');
     }
     dns.resolveTxt('txt.' + this.config.eureka.ec2Region + '.' + this.config.eureka.host, (error, addresses) => {
-      if(error) {
+      if (error) {
         throw new Error('Error resolving eureka server list for region [' + this.config.eureka.ec2Region + '] using DNS: [' + error + ']');
       }
       dns.resolveTxt('txt.' + addresses[0][Math.floor(Math.random() * addresses[0].length)], (error, results) => {
-        if(error) {
+        if (error) {
           throw new Error('Error locating eureka server using DNS: [' + error + ']');
         }
         this.logger.debug('Found Eureka Server @ ', results);
-        callback([].concat.apply([], results).shift());
+        callback([].concat([], ...results).shift());
       });
     });
   }
