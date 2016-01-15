@@ -6,7 +6,8 @@ export default {
     registryFetchInterval: 30000,
     fetchRegistry: true,
     servicePath: '/eureka/v2/apps/',
-    ssl: false
+    ssl: false,
+    useDns: false
   },
   instance: {}
 };

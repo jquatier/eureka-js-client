@@ -3,6 +3,7 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import merge from 'deepmerge';
 import path from 'path';
+import dns from 'dns';
 import {series} from 'async';
 
 import {Logger} from './Logger';
@@ -56,7 +57,17 @@ export class Eureka {
     Base Eureka server URL + path
   */
   get eurekaUrl() {
-    return `${this.config.eureka.ssl ? 'https' : 'http'}://${this.config.eureka.host}:${this.config.eureka.port}${this.config.eureka.servicePath}`;
+    return `${this.config.eureka.ssl ? 'https' : 'http'}://${this.eurekaHost}:${this.config.eureka.port}${this.config.eureka.servicePath}`;
+  }
+
+  get eurekaHost() {
+    if(this.amazonDataCenter && this.config.eureka.useDns) {
+      this.locateEurekaHostUsingDns((resolvedHost) => {
+        return resolvedHost;
+      });
+    } else {
+      return this.config.eureka.host;
+    }
   }
 
   /*
@@ -64,10 +75,17 @@ export class Eureka {
     instance-id in the metadata. Else, it's the hostName.
   */
   get instanceId() {
-    if (this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon') {
+    if (this.amazonDataCenter) {
       return this.config.instance.dataCenterInfo.metadata['instance-id'];
     }
     return this.config.instance.hostName;
+  }
+
+  /*
+    Helper method to determine if this is an AWS datacenter.
+  */
+  get amazonDataCenter() {
+    return this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon';
   }
 
   /*
@@ -273,6 +291,31 @@ export class Eureka {
       this.cache.vip[app.instance.vipAddress] = instances;
       this.cache.app[app.name.toUpperCase()] = instances;
     }
+  }
+
+  /*
+    Locates a Eureka host using DNS lookups. The DNS records are looked up by a naming
+    convention and TXT records must be created according to the Eureka Wiki here:
+    https://github.com/Netflix/eureka/wiki/Configuring-Eureka-in-AWS-Cloud
+
+    Naming convention: txt.<REGION>.<HOST>
+   */
+  locateEurekaHostUsingDns(callback = noop) {
+    if(!this.config.eureka.ec2Region) {
+      throw new Error('EC2 region was undefined. config.eureka.ec2Region must be set to resolve Eureka using DNS records.')
+    }
+    dns.resolveTxt('txt.' + this.config.eureka.ec2Region + '.' + this.config.eureka.host, (error, addresses) => {
+      if(error) {
+        throw new Error('Error resolving eureka server list for region [' + this.config.eureka.ec2Region + '] using DNS: [' + error + ']');
+      }
+      dns.resolveTxt('txt.' + addresses[0][Math.floor(Math.random() * addresses[0].length)], (error, results) => {
+        if(error) {
+          throw new Error('Error locating eureka server using DNS: [' + error + ']');
+        }
+        this.logger.debug('Found Eureka Server @ ', results);
+        callback([].concat.apply([], results).shift());
+      });
+    });
   }
 
 }

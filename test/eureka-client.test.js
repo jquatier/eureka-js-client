@@ -2,6 +2,7 @@ import sinon from 'sinon';
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
 import request from 'request';
+import dns from 'dns';
 import {Eureka} from '../src/eureka-client';
 
 let expect = chai.expect;
@@ -61,7 +62,7 @@ describe('Eureka client', () => {
     });
   });
 
-  describe('get instanceId()', () => { 
+  describe('get instanceId()', () => {
 
     it('should return hostname for non-AWS datacenters', () => {
       let config = {
@@ -83,7 +84,7 @@ describe('Eureka client', () => {
 
   });
 
-  describe('start()', () => { 
+  describe('start()', () => {
 
     let config, client, registerSpy, fetchRegistrySpy;
     before(() => {
@@ -111,7 +112,7 @@ describe('Eureka client', () => {
 
   });
 
-  describe('stop()', () => { 
+  describe('stop()', () => {
 
     let config, client, deregisterSpy;
     before(() => {
@@ -137,7 +138,7 @@ describe('Eureka client', () => {
 
   });
 
-  describe('register()', () => { 
+  describe('register()', () => {
 
     let config, client, heartbeatsSpy, registryFetchSpy;
     beforeEach(() => {
@@ -157,12 +158,12 @@ describe('Eureka client', () => {
     });
 
     it('should call register URI, and initiate heartbeats / registry fetches', () => {
-      
+
       sinon.stub(request, 'post').yields(null, {statusCode: 204}, null)
       let registerCb = sinon.spy();
       client.register(registerCb);
 
-      expect(request.post).to.have.been.calledWithMatch({ 
+      expect(request.post).to.have.been.calledWithMatch({
         body: {
           instance: {
             app: 'app',
@@ -184,7 +185,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for non-204 response', () => {
-      
+
       sinon.stub(request, 'post').yields(null, {statusCode: 500}, null);
       let registerCb = sinon.spy();
       client.register(registerCb);
@@ -197,7 +198,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for request error', () => {
-      
+
       sinon.stub(request, 'post').yields(new Error('request error'), null, null);
       let registerCb = sinon.spy();
       client.register(registerCb);
@@ -211,7 +212,7 @@ describe('Eureka client', () => {
 
   });
 
-  describe('deregister()', () => { 
+  describe('deregister()', () => {
 
     let config, client;
     beforeEach(() => {
@@ -231,7 +232,7 @@ describe('Eureka client', () => {
       let deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
-      expect(request.del).to.have.been.calledWithMatch({ 
+      expect(request.del).to.have.been.calledWithMatch({
         url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost'
       });
 
@@ -438,12 +439,12 @@ describe('Eureka client', () => {
     });
 
     it('should call registry URI', () => {
-      
+
       sinon.stub(request, 'get').yields(null, {statusCode: 200}, null)
       let registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
-      expect(request.get).to.have.been.calledWithMatch({ 
+      expect(request.get).to.have.been.calledWithMatch({
         url: 'http://127.0.0.1:9999/eureka/v2/apps/',
         headers: { Accept: 'application/json' }
       });
@@ -453,7 +454,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for non-200 response', () => {
-      
+
       sinon.stub(request, 'get').yields(null, {statusCode: 500}, null);
       let registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
@@ -463,7 +464,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for request error', () => {
-      
+
       sinon.stub(request, 'get').yields(new Error('request error'), null, null);
       let registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
@@ -550,6 +551,50 @@ describe('Eureka client', () => {
       client.transformApp(app);
       expect(client.cache.app[app.name.toUpperCase()].length).to.equal(2);
       expect(client.cache.vip[theVip].length).to.equal(2);
+    });
+  });
+
+  describe('locateEurekaHostUsingDns()', () => {
+
+    let config, client;
+    let eurekaHosts = ['1a.eureka.mydomain.com','1b.eureka.mydomain.com','1c.eureka.mydomain.com'];
+
+    afterEach(() => {
+      dns.resolveTxt.restore();
+    });
+
+    it('should throw error when ec2Region is undefined', () => {
+      config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      client = new Eureka(config);
+
+      sinon.stub(dns, 'resolveTxt').yields(null, []);
+      function noRegion() {
+        client.locateEurekaHostUsingDns();
+      }
+      expect(noRegion).to.throw(Error);
+    });
+
+    it('should lookup server list using DNS', () => {
+      config = {
+        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
+        eureka: {host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region'}
+      };
+      client = new Eureka(config);
+
+      let locateCb = sinon.spy();
+      let resolveStub = sinon.stub(dns, 'resolveTxt');
+      resolveStub.onCall(0).yields(null, [eurekaHosts]);
+      resolveStub.onCall(1).yields(null, [['1.2.3.4']]);
+      client.locateEurekaHostUsingDns(locateCb);
+
+      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
+      expect(dns.resolveTxt).to.have.been.calledWith(sinon.match(function(value) {
+        return eurekaHosts.indexOf(value);
+      }));
+      expect(locateCb).to.have.been.calledWithMatch('1.2.3.4');
     });
   });
 
