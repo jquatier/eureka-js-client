@@ -1,0 +1,81 @@
+import request from 'request';
+import async from 'async';
+import {Logger} from './Logger';
+
+/*
+  Utility class for pulling AWS metadata that Eureka requires when registering as an Amazon instance (datacenter).
+*/
+export class AwsMetadata {
+
+  constructor(config = {}) {
+    this.logger = config.logger || new Logger();
+    this.host = config.host || '169.254.169.254';
+  }
+
+  fetchMetadata(resultsCallback) {
+    async.parallel({
+      'ami-id': callback => {
+        this.lookupMetadataKey('ami-id', callback);
+      },
+      'instance-id': callback => {
+        this.lookupMetadataKey('instance-id', callback);
+      },
+      'instance-type': callback => {
+        this.lookupMetadataKey('instance-type', callback);
+      },
+      'local-ipv4': callback => {
+        this.lookupMetadataKey('local-ipv4', callback);
+      },
+      'local-hostname': callback => {
+        this.lookupMetadataKey('local-hostname', callback);
+      },
+      'availability-zone': callback => {
+        this.lookupMetadataKey('placement/availability-zone', callback);
+      },
+      'public-hostname': callback => {
+        this.lookupMetadataKey('public-hostname', callback);
+      },
+      'public-ipv4': callback => {
+        this.lookupMetadataKey('public-ipv4', callback);
+      },
+      mac: callback => {
+        this.lookupMetadataKey('mac', callback);
+      },
+      accountId: callback => {
+        // the accountId is in the identity document.
+        this.lookupInstanceIdentity((error, identity) => {
+          callback(null, identity ? identity.accountId : null);
+        });
+      }
+    }, (error, results) => {
+      // we need the mac before we can lookup the vpcId...
+      this.lookupMetadataKey('network/interfaces/macs/' + results.mac + '/vpc-id', (error, vpcId) => {
+        results['vpc-id'] = vpcId;
+        this.logger.info('Instance AWS Metadata', results);
+        resultsCallback(results);
+      });
+    });
+  }
+
+  lookupMetadataKey(key, callback) {
+    request.get({
+      url: `http://${this.host}/latest/meta-data/${key}`
+    }, (error, response, body) => {
+      if (error) {
+        this.logger.error('Error requesting metadata key', error);
+      }
+      callback(null, (error || response.statusCode !== 200) ? null : body);
+    });
+  }
+
+  lookupInstanceIdentity(callback) {
+    request.get({
+      url: `http://${this.host}/latest/dynamic/instance-identity/document`
+    }, (error, response, body) => {
+      if (error) {
+        this.logger.error('Error requesting instance identity document', error);
+      }
+      callback(null, (error || response.statusCode !== 200) ? null : JSON.parse(body));
+    });
+  }
+}
