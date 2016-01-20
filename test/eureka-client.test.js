@@ -571,14 +571,14 @@ describe('Eureka client', () => {
       metadataSpy = sinon.spy();
 
       //let awsClientStub = sinon.createStubInstance(AwsMetadata);
-      sinon.stub(AwsMetadata.prototype, 'fetchMetadata').yields({
+      sinon.stub(client.metadataClient, 'fetchMetadata').yields({
         'public-hostname': 'ec2-127-0-0-1.us-fake-1.mydomain.com',
         'public-ipv4': '54.54.54.54'
       });
     });
 
     afterEach(() => {
-      AwsMetadata.prototype.fetchMetadata.restore();
+      client.metadataClient.fetchMetadata.restore();
     });
 
     it('should update hosts with AWS metadata public host', () => {
