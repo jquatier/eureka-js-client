@@ -71,8 +71,7 @@ var appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 
 ## Configuring for AWS environments
 
-For AWS environments (`dataCenterInfo.name` == `Amazon`) the client has built-in logic to request the AWS metadata that the Eureka
-server requires. See [Eureka REST schema](https://github.com/Netflix/eureka/wiki/Eureka-REST-operations) for more information.
+For AWS environments (`dataCenterInfo.name == 'Amazon'`) the client has built-in logic to request the AWS metadata that the Eureka server requires. See [Eureka REST schema](https://github.com/Netflix/eureka/wiki/Eureka-REST-operations) for more information.
 
 ```javascript
 // example configuration for AWS
@@ -99,7 +98,7 @@ var client = new Eureka({
 Notes:
   * Under this configuration, the instance `hostName` and `ipAddr` will be set to the public host and public IP that the AWS metadata provides.
   * For status and healthcheck URLs, you may use the replacement key of `__HOST__` to use the public host.
-  * Metadata fetching can be disabled by setting `config.eureka.fetchAwsMetadata` to `false` if you want to provide your own metadata in AWS environments.
+  * Metadata fetching can be disabled by setting `config.eureka.fetchMetadata` to `false` if you want to provide your own metadata in AWS environments.
 
 ## Debugging
 

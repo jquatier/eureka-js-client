@@ -314,7 +314,7 @@ export class Eureka {
     flexibility since the host isn't known until the metadata is fetched.
 
     This will only get called when dataCenterInfo.name is Amazon, but you can
-    set config.eureka.fetchAwsMetadata to false if you want to provide your own
+    set config.eureka.fetchMetadata to false if you want to provide your own
     metadata in AWS environments.
   */
   addInstanceMetadata(callback = noop) {
