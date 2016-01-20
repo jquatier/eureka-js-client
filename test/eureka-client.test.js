@@ -4,6 +4,7 @@ import sinonChai from 'sinon-chai';
 import request from 'request';
 import dns from 'dns';
 import {Eureka} from '../src/eureka-client';
+import {AwsMetadata} from '../src/aws-metadata';
 
 let expect = chai.expect;
 chai.use(sinonChai);
@@ -292,7 +293,7 @@ describe('Eureka client', () => {
     let config;
     beforeEach(() => {
       config = {
-        instance: {app: 'app', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: 'Amazon'},
+        instance: {app: 'app', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name: 'Amazon'}},
         eureka: {host: '127.0.0.1', port: 9999}
       };
     });
@@ -352,7 +353,7 @@ describe('Eureka client', () => {
     let client, config;
     beforeEach(() => {
       config = {
-        instance: {app: 'app', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: 'Amazon'},
+        instance: {app: 'app', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name: 'Amazon'}},
         eureka: {host: '127.0.0.1', port: 9999}
       };
       client = new Eureka(config);
@@ -389,7 +390,7 @@ describe('Eureka client', () => {
     let client, config;
     beforeEach(() => {
       config = {
-        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: 'Amazon'},
+        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: {name: 'Amazon'}},
         eureka: {host: '127.0.0.1', port: 9999}
       };
       client = new Eureka(config);
@@ -480,7 +481,7 @@ describe('Eureka client', () => {
     let client, config, registry, app1, app2, transformSpy;
     beforeEach(() => {
       config = {
-        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: 'Amazon'},
+        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: {name: 'Amazon'}},
         eureka: {host: '127.0.0.1', port: 9999}
       };
       registry = {
@@ -529,7 +530,7 @@ describe('Eureka client', () => {
     let client, config, app, instance1, instance2, theVip;
     beforeEach(() => {
       config = {
-        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: 'Amazon'},
+        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: {name: 'Amazon'}},
         eureka: {host: '127.0.0.1', port: 9999}
       };
       client = new Eureka(config);
@@ -552,6 +553,42 @@ describe('Eureka client', () => {
       expect(client.cache.app[app.name.toUpperCase()].length).to.equal(2);
       expect(client.cache.vip[theVip].length).to.equal(2);
     });
+  });
+
+  describe('addAwsInstanceMetadata()', () => {
+
+    let client, config, metadataSpy;
+    beforeEach(() => {
+      config = {
+        instance: {
+          app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: { name: 'Amazon'},
+          statusPageUrl: 'http://__HOST__:8080/',
+          healthCheckUrl: 'http://__HOST__:8077/healthcheck',
+        },
+        eureka: {host: '127.0.0.1', port: 9999}
+      };
+      client = new Eureka(config);
+      metadataSpy = sinon.spy();
+
+      //let awsClientStub = sinon.createStubInstance(AwsMetadata);
+      sinon.stub(AwsMetadata.prototype, 'fetchMetadata').yields({
+        'public-hostname': 'ec2-127-0-0-1.us-fake-1.mydomain.com',
+        'public-ipv4': '54.54.54.54'
+      });
+    });
+
+    afterEach(() => {
+      AwsMetadata.prototype.fetchMetadata.restore();
+    });
+
+    it('should update hosts with AWS metadata public host', () => {
+      client.addAwsInstanceMetadata(metadataSpy);
+      expect(client.config.instance.hostName).to.equal('ec2-127-0-0-1.us-fake-1.mydomain.com');
+      expect(client.config.instance.ipAddr).to.equal('54.54.54.54');
+      expect(client.config.instance.statusPageUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8080/');
+      expect(client.config.instance.healthCheckUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8077/healthcheck');
+    });
+
   });
 
   describe('locateEurekaHostUsingDns()', () => {

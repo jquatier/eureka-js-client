@@ -51,7 +51,7 @@ export class AwsMetadata {
       // we need the mac before we can lookup the vpcId...
       this.lookupMetadataKey('network/interfaces/macs/' + results.mac + '/vpc-id', (error, vpcId) => {
         results['vpc-id'] = vpcId;
-        this.logger.info('Instance AWS Metadata', results);
+        this.logger.debug('Found Instance AWS Metadata', results);
         resultsCallback(results);
       });
     });

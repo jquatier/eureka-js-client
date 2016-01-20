@@ -6,6 +6,7 @@ import path from 'path';
 import dns from 'dns';
 import {series} from 'async';
 
+import {AwsMetadata} from './aws-metadata';
 import {Logger} from './Logger';
 import defaultConfig from './default-config';
 
@@ -47,6 +48,12 @@ export class Eureka {
     // Validate the provided the values we need:
     this.validateConfig(this.config);
 
+    if (this.amazonDataCenter) {
+      this.metadataClient = new AwsMetadata({
+        logger: this.logger
+      });
+    }
+
     this.cache = {
       app: {},
       vip: {}
@@ -68,7 +75,7 @@ export class Eureka {
     Helper method to determine if this is an AWS datacenter.
   */
   get amazonDataCenter() {
-    return this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon';
+    return this.config.instance.dataCenterInfo.name && this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon';
   }
 
   /*
@@ -85,6 +92,12 @@ export class Eureka {
   */
   start(callback = noop) {
     series([
+      done => {
+        if (this.amazonDataCenter && this.config.eureka.fetchAwsMetadata) {
+          return this.addAwsInstanceMetadata(done);
+        }
+        done();
+      },
       done => {
         this.register(done);
       },
@@ -294,7 +307,35 @@ export class Eureka {
   }
 
   /*
-    Returns the Eureka host. This method is async because potentially we might have to 
+    Fetches the AWS metadata using the built-in client and updates the instance
+    configuration with the public hostname and IP address. A string replacement
+    is done on the healthCheckUrl and statusPageUrl so that users can define
+    the URLs with a placeholder for the host ('__HOST__'). This allows
+    flexibility since the host isn't known until the metadata is fetched.
+
+    This will only get called when dataCenterInfo.name is Amazon, but you can
+    set config.eureka.fetchAwsMetadata to false if you want to provide your own
+    metadata in AWS environments.
+  */
+  addAwsInstanceMetadata(callback = noop) {
+    this.metadataClient.fetchMetadata(awsMetadata => {
+      this.config.instance.dataCenterInfo.metadata = merge(this.config.instance.dataCenterInfo.metadata, awsMetadata);
+      this.config.instance.hostName = awsMetadata['public-hostname'];
+      this.config.instance.ipAddr = awsMetadata['public-ipv4'];
+
+      if (this.config.instance.statusPageUrl) {
+        this.config.instance.statusPageUrl = this.config.instance.statusPageUrl.replace('__HOST__', awsMetadata['public-hostname']);
+      }
+      if (this.config.instance.healthCheckUrl) {
+        this.config.instance.healthCheckUrl = this.config.instance.healthCheckUrl.replace('__HOST__', awsMetadata['public-hostname']);
+      }
+
+      callback();
+    });
+  }
+
+  /*
+    Returns the Eureka host. This method is async because potentially we might have to
     execute DNS lookups which is an async network operation.
   */
   lookupCurrentEurekaHost(callback = noop) {
