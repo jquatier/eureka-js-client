@@ -7,7 +7,8 @@ export default {
     fetchRegistry: true,
     servicePath: '/eureka/v2/apps/',
     ssl: false,
-    useDns: false
+    useDns: false,
+    fetchMetadata: true
   },
   instance: {}
 };
