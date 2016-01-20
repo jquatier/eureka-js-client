@@ -93,8 +93,8 @@ export class Eureka {
   start(callback = noop) {
     series([
       done => {
-        if (this.amazonDataCenter && this.config.eureka.fetchAwsMetadata) {
-          return this.addAwsInstanceMetadata(done);
+        if (this.metadataClient && this.config.eureka.fetchMetadata) {
+          return this.addInstanceMetadata(done);
         }
         done();
       },
@@ -307,7 +307,7 @@ export class Eureka {
   }
 
   /*
-    Fetches the AWS metadata using the built-in client and updates the instance
+    Fetches the metadata using the built-in client and updates the instance
     configuration with the public hostname and IP address. A string replacement
     is done on the healthCheckUrl and statusPageUrl so that users can define
     the URLs with a placeholder for the host ('__HOST__'). This allows
@@ -317,17 +317,17 @@ export class Eureka {
     set config.eureka.fetchAwsMetadata to false if you want to provide your own
     metadata in AWS environments.
   */
-  addAwsInstanceMetadata(callback = noop) {
-    this.metadataClient.fetchMetadata(awsMetadata => {
-      this.config.instance.dataCenterInfo.metadata = merge(this.config.instance.dataCenterInfo.metadata, awsMetadata);
-      this.config.instance.hostName = awsMetadata['public-hostname'];
-      this.config.instance.ipAddr = awsMetadata['public-ipv4'];
+  addInstanceMetadata(callback = noop) {
+    this.metadataClient.fetchMetadata(metadataResult => {
+      this.config.instance.dataCenterInfo.metadata = merge(this.config.instance.dataCenterInfo.metadata, metadataResult);
+      this.config.instance.hostName = metadataResult['public-hostname'];
+      this.config.instance.ipAddr = metadataResult['public-ipv4'];
 
       if (this.config.instance.statusPageUrl) {
-        this.config.instance.statusPageUrl = this.config.instance.statusPageUrl.replace('__HOST__', awsMetadata['public-hostname']);
+        this.config.instance.statusPageUrl = this.config.instance.statusPageUrl.replace('__HOST__', metadataResult['public-hostname']);
       }
       if (this.config.instance.healthCheckUrl) {
-        this.config.instance.healthCheckUrl = this.config.instance.healthCheckUrl.replace('__HOST__', awsMetadata['public-hostname']);
+        this.config.instance.healthCheckUrl = this.config.instance.healthCheckUrl.replace('__HOST__', metadataResult['public-hostname']);
       }
 
       callback();

@@ -555,7 +555,7 @@ describe('Eureka client', () => {
     });
   });
 
-  describe('addAwsInstanceMetadata()', () => {
+  describe('addInstanceMetadata()', () => {
 
     let client, config, metadataSpy;
     beforeEach(() => {
@@ -582,7 +582,7 @@ describe('Eureka client', () => {
     });
 
     it('should update hosts with AWS metadata public host', () => {
-      client.addAwsInstanceMetadata(metadataSpy);
+      client.addInstanceMetadata(metadataSpy);
       expect(client.config.instance.hostName).to.equal('ec2-127-0-0-1.us-fake-1.mydomain.com');
       expect(client.config.instance.ipAddr).to.equal('54.54.54.54');
       expect(client.config.instance.statusPageUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8080/');

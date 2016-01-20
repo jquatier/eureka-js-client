@@ -1,4 +1,4 @@
-# eureka-js-client 
+# eureka-js-client
 [![npm version](https://badge.fury.io/js/eureka-js-client.svg)](http://badge.fury.io/js/eureka-js-client) [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client) [![Coverage Status](https://coveralls.io/repos/jquatier/eureka-js-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/jquatier/eureka-js-client?branch=master) [![Dependency Status](https://david-dm.org/jquatier/eureka-js-client.svg)](https://david-dm.org/jquatier/eureka-js-client)
 
 A JavaScript implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.
@@ -68,6 +68,38 @@ var appInfo = client.getInstancesByAppId('YOURSERVICE');
 // appInfo.application.instance contains array of instances
 var appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
+
+## Configuring for AWS environments
+
+For AWS environments (`dataCenterInfo.name` == `Amazon`) the client has built-in logic to request the AWS metadata that the Eureka
+server requires. See [Eureka REST schema](https://github.com/Netflix/eureka/wiki/Eureka-REST-operations) for more information.
+
+```javascript
+// example configuration for AWS
+var client = new Eureka({
+  // application instance information
+  instance: {
+    app: 'jqservice',
+    port: 8080,
+    vipAddress: 'jq.test.something.com',
+    statusPageUrl: 'http://__HOST__:8080/',
+    healthCheckUrl: 'http://__HOST__:8077/healthcheck',
+    dataCenterInfo: {
+      name: 'Amazon'
+    }
+  },
+  eureka: {
+    // eureka server host / port / EC2 region
+    host: '192.168.99.100',
+    port: 32768
+  }
+});
+```
+
+Notes:
+  * Under this configuration, the instance `hostName` and `ipAddr` will be set to the public host and public IP that the AWS metadata provides.
+  * For status and healthcheck URLs, you may use the replacement key of `__HOST__` to use the public host.
+  * Metadata fetching can be disabled by setting `config.eureka.fetchAwsMetadata` to `false` if you want to provide your own metadata in AWS environments.
 
 ## Debugging
 
