@@ -1,0 +1,3 @@
+eureka:
+  overrides: 2
+  otherCustom: 'test2'

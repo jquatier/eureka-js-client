@@ -1,0 +1,11 @@
+eureka:
+  overrides: 1
+  custom: 'test'
+  heartbeatInterval: 999
+  registryFetchInterval: 999
+  fetchRegistry: false
+  servicePath: '/eureka/v2/apps/'
+  ssl: false
+  useDns: false
+  fetchMetadata: false
+instance: {}

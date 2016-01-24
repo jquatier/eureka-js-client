@@ -4,10 +4,19 @@ import sinonChai from 'sinon-chai';
 import request from 'request';
 import dns from 'dns';
 import {Eureka} from '../src/eureka-client';
-import {AwsMetadata} from '../src/aws-metadata';
+import {join} from 'path';
+import merge from 'deepmerge';
 
-let expect = chai.expect;
+const expect = chai.expect;
 chai.use(sinonChai);
+
+function makeConfig(overrides = {}) {
+  const config = {
+    instance: {app: 'app', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name: 'Amazon'}},
+    eureka: {host: '127.0.0.1', port: 9999}
+  };
+  return merge(config, overrides);
+}
 
 describe('Eureka client', () => {
 
@@ -286,6 +295,37 @@ describe('Eureka client', () => {
 
     });
 
+  });
+
+  describe('eureka-client.yml', () => {
+    let stub;
+    before(() => {
+      stub = sinon.stub(process, 'cwd').returns(__dirname);
+    });
+
+    after(() => {
+      stub.restore();
+    });
+
+    it('should load the correct', () => {
+      const client = new Eureka(makeConfig());
+      console.log(client.config);
+      expect(client.config.eureka.custom).to.equal('test');
+    });
+
+    it('should load the environment overrides', () => {
+      const client = new Eureka(makeConfig());
+      expect(client.config.eureka.otherCustom).to.equal('test2');
+      expect(client.config.eureka.overrides).to.equal(2);
+    });
+
+    it('should support a `cwd` and `filename` property', () => {
+      const client = new Eureka(makeConfig({
+        cwd: join(__dirname, 'fixtures'),
+        filename: 'config.yml'
+      }));
+      expect(client.config.eureka.fromFixture).to.equal(true);
+    });
   });
 
   describe('validateConfig()', () => {
@@ -570,7 +610,6 @@ describe('Eureka client', () => {
       client = new Eureka(config);
       metadataSpy = sinon.spy();
 
-      //let awsClientStub = sinon.createStubInstance(AwsMetadata);
       sinon.stub(client.metadataClient, 'fetchMetadata').yields({
         'public-hostname': 'ec2-127-0-0-1.us-fake-1.mydomain.com',
         'public-ipv4': '54.54.54.54'

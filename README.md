@@ -39,9 +39,24 @@ var client = new Eureka({
 });
 ```
 
-The Eureka client searches for the YAML file `eureka-client.yml` in the current working directory. It further searches for environment specific overrides in the environment specific YAML files. The environment is typically `test` or `production`, and is determined by the `NODE_ENV` environment variable.
+The Eureka client searches for the YAML file `eureka-client.yml` in the current working directory. It further searches for environment specific overrides in the environment specific YAML files (e.g. `eureka-client-test.yml`). The environment is typically `development` or `production`, and is determined by the `NODE_ENV` environment variable. The options passed to the constructor overwrite any values that are set in configuration files.
 
-The options passed to the constructor overwrite any values that are set in configuration files.
+You can configure a custom directory to load the configuration files from by specifying a `cwd` option in the object passed to the `Eureka` constructor.
+
+```javascript
+var client = new Eureka({
+  cwd: __dirname + '/config'
+});
+```
+
+If you wish, you can also overwrite the name of the file that is loaded with the `filename` property. However, this disables the environment-based configuration loaded. You can mix the `cwd` and `filename` options.
+
+```javascript
+var client = new Eureka({
+  filename: 'eureka.yml',
+  cwd: __dirname + '/config'
+});
+```
 
 ### Register with Eureka & start application heartbeats
 
