@@ -4,13 +4,13 @@ import yaml from 'js-yaml';
 import merge from 'deepmerge';
 import path from 'path';
 import dns from 'dns';
-import {series} from 'async';
+import { series } from 'async';
 
-import {AwsMetadata} from './aws-metadata';
-import {Logger} from './Logger';
-import defaultConfig from './default-config';
+import AwsMetadata from './aws-metadata';
+import Logger from './Logger';
+import defaultConfig from './defaultConfig';
 
-const noop = () => {};
+function noop() {}
 
 /*
   Eureka JS client
@@ -22,7 +22,9 @@ function getYaml(file) {
   let yml = {};
   try {
     yml = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
-  } catch (e) {}
+  } catch (e) {
+    // Ignore YAML load error.
+  }
   return yml;
 }
 
@@ -52,13 +54,13 @@ export class Eureka {
 
     if (this.amazonDataCenter) {
       this.metadataClient = new AwsMetadata({
-        logger: this.logger
+        logger: this.logger,
       });
     }
 
     this.cache = {
       app: {},
-      vip: {}
+      vip: {},
     };
   }
 
@@ -77,7 +79,10 @@ export class Eureka {
     Helper method to determine if this is an AWS datacenter.
   */
   get amazonDataCenter() {
-    return this.config.instance.dataCenterInfo.name && this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon';
+    return (
+      this.config.instance.dataCenterInfo.name &&
+      this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon'
+    );
   }
 
   /*
@@ -85,7 +90,9 @@ export class Eureka {
   */
   buildEurekaUrl(callback = noop) {
     this.lookupCurrentEurekaHost(eurekaHost => {
-      callback(`${this.config.eureka.ssl ? 'https' : 'http'}://${eurekaHost}:${this.config.eureka.port}${this.config.eureka.servicePath}`);
+      const { port, servicePath, ssl } = this.config.eureka;
+      const host = ssl ? 'https' : 'http';
+      callback(`${host}://${eurekaHost}:${port}${servicePath}`);
     });
   }
 
@@ -108,7 +115,7 @@ export class Eureka {
           return this.fetchRegistry(done);
         }
         done();
-      }
+      },
     ], callback);
   }
 
@@ -148,10 +155,13 @@ export class Eureka {
       request.post({
         url: eurekaUrl + this.config.instance.app,
         json: true,
-        body: {instance: this.config.instance}
+        body: { instance: this.config.instance },
       }, (error, response, body) => {
         if (!error && response.statusCode === 204) {
-          this.logger.info('registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
+          this.logger.info(
+            'registered with eureka: ',
+            `${this.config.instance.app}/${this.instanceId}`
+          );
           this.startHeartbeats();
           if (this.config.eureka.fetchRegistry) {
             this.startRegistryFetches();
@@ -160,7 +170,9 @@ export class Eureka {
         } else if (error) {
           return callback(error);
         }
-        return callback(new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`));
+        return callback(
+          new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`)
+        );
       });
     });
   }
@@ -171,15 +183,20 @@ export class Eureka {
   deregister(callback = noop) {
     this.buildEurekaUrl(eurekaUrl => {
       request.del({
-        url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`
+        url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
-          this.logger.info('de-registered with eureka: ', `${this.config.instance.app}/${this.instanceId}`);
+          this.logger.info(
+            'de-registered with eureka: ',
+            `${this.config.instance.app}/${this.instanceId}`
+          );
           return callback(null);
         } else if (error) {
           return callback(error);
         }
-        return callback(new Error(`eureka deregistration FAILED: status: ${response.statusCode} body: ${body}`));
+        return callback(
+          new Error(`eureka deregistration FAILED: status: ${response.statusCode} body: ${body}`)
+        );
       });
     });
   }
@@ -197,7 +214,7 @@ export class Eureka {
   renew() {
     this.buildEurekaUrl(eurekaUrl => {
       request.put({
-        url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`
+        url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           this.logger.debug('eureka heartbeat success');
@@ -205,7 +222,10 @@ export class Eureka {
           if (error) {
             this.logger.error('An error in the request occured.', error);
           }
-          this.logger.warn('eureka heartbeat FAILED, will retry.', `status: ${response.statusCode} body: ${body}`);
+          this.logger.warn(
+            'eureka heartbeat FAILED, will retry.',
+            `status: ${response.statusCode} body: ${body}`
+          );
         }
       });
     });
@@ -257,8 +277,8 @@ export class Eureka {
       request.get({
         url: eurekaUrl,
         headers: {
-          Accept: 'application/json'
-        }
+          Accept: 'application/json',
+        },
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           this.logger.debug('retrieved registry successfully');
@@ -279,7 +299,7 @@ export class Eureka {
     if (!registry) {
       throw new Error('Unable to transform empty registry');
     }
-    this.cache = {app: {}, vip: {}};
+    this.cache = { app: {}, vip: {} };
     if (!registry.applications.application) {
       return;
     }
@@ -321,15 +341,22 @@ export class Eureka {
   */
   addInstanceMetadata(callback = noop) {
     this.metadataClient.fetchMetadata(metadataResult => {
-      this.config.instance.dataCenterInfo.metadata = merge(this.config.instance.dataCenterInfo.metadata, metadataResult);
+      this.config.instance.dataCenterInfo.metadata = merge(
+        this.config.instance.dataCenterInfo.metadata,
+        metadataResult
+      );
       this.config.instance.hostName = metadataResult['public-hostname'];
       this.config.instance.ipAddr = metadataResult['public-ipv4'];
 
       if (this.config.instance.statusPageUrl) {
-        this.config.instance.statusPageUrl = this.config.instance.statusPageUrl.replace('__HOST__', metadataResult['public-hostname']);
+        const statusPageUrl = this.config.instance.statusPageUrl;
+        const replacedUrl = statusPageUrl.replace('__HOST__', metadataResult['public-hostname']);
+        this.config.instance.statusPageUrl = replacedUrl;
       }
       if (this.config.instance.healthCheckUrl) {
-        this.config.instance.healthCheckUrl = this.config.instance.healthCheckUrl.replace('__HOST__', metadataResult['public-hostname']);
+        const healthCheckUrl = this.config.instance.healthCheckUrl;
+        const replacedUrl = healthCheckUrl.replace('__HOST__', metadataResult['public-hostname']);
+        this.config.instance.healthCheckUrl = replacedUrl;
       }
 
       callback();
@@ -342,9 +369,7 @@ export class Eureka {
   */
   lookupCurrentEurekaHost(callback = noop) {
     if (this.amazonDataCenter && this.config.eureka.useDns) {
-      this.locateEurekaHostUsingDns(resolvedHost => {
-        return callback(resolvedHost);
-      });
+      this.locateEurekaHostUsingDns(resolvedHost => callback(resolvedHost));
     } else {
       return callback(this.config.eureka.host);
     }
@@ -358,19 +383,26 @@ export class Eureka {
     Naming convention: txt.<REGION>.<HOST>
    */
   locateEurekaHostUsingDns(callback = noop) {
-    if (!this.config.eureka.ec2Region) {
-      throw new Error('EC2 region was undefined. config.eureka.ec2Region must be set to resolve Eureka using DNS records.');
+    const { ec2Region, host } = this.config.eureka;
+    if (!ec2Region) {
+      throw new Error(
+        'EC2 region was undefined. ' +
+        'config.eureka.ec2Region must be set to resolve Eureka using DNS records.'
+      );
     }
-    dns.resolveTxt('txt.' + this.config.eureka.ec2Region + '.' + this.config.eureka.host, (error, addresses) => {
-      if (error) {
-        throw new Error('Error resolving eureka server list for region [' + this.config.eureka.ec2Region + '] using DNS: [' + error + ']');
+    dns.resolveTxt(`txt.${ec2Region}.${host}`, (err, addresses) => {
+      if (err) {
+        throw new Error(
+          `Error resolving eureka server list for region [${ec2Region}] using DNS: [${err}]`
+        );
       }
-      dns.resolveTxt('txt.' + addresses[0][Math.floor(Math.random() * addresses[0].length)], (error, results) => {
-        if (error) {
-          throw new Error('Error locating eureka server using DNS: [' + error + ']');
+      const random = Math.floor(Math.random() * addresses[0].length);
+      dns.resolveTxt(`txt.${addresses[0][random]}`, (resolveErr, results) => {
+        if (resolveErr) {
+          throw new Error(`Error locating eureka server using DNS: [${resolveErr}]`);
         }
         this.logger.debug('Found Eureka Server @ ', results);
-        callback([].concat([], ...results).shift());
+        callback([].concat(...results).shift());
       });
     });
   }

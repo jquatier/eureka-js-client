@@ -1,12 +1,9 @@
 {
-  "extends": "xo/esnext",
+  "extends": "airbnb/base",
   "rules": {
-    "indent": [2, 2],
-    "no-trailing-spaces": 0,
-    "prefer-reflect": 0
+    "no-param-reassign": [2, {"props": false}]
   },
-  "env": {
-    "mocha": true,
-    "node": true
-  }
+  "plugins": [
+    "markdown"
+  ]
 }

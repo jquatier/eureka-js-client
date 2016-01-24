@@ -8,7 +8,7 @@ export default {
     servicePath: '/eureka/v2/apps/',
     ssl: false,
     useDns: false,
-    fetchMetadata: true
+    fetchMetadata: true,
   },
-  instance: {}
+  instance: {},
 };

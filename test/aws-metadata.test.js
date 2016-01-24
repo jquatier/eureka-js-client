@@ -1,10 +1,9 @@
 import sinon from 'sinon';
-import chai from 'chai';
+import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 import request from 'request';
-import {AwsMetadata} from '../src/aws-metadata';
+import AwsMetadata from '../src/aws-metadata';
 
-let expect = chai.expect;
 chai.use(sinonChai);
 
 describe('AWS Metadata client', () => {

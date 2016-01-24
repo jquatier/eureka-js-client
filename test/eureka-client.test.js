@@ -1,13 +1,12 @@
 import sinon from 'sinon';
-import chai from 'chai';
+import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 import request from 'request';
 import dns from 'dns';
-import {Eureka} from '../src/eureka-client';
-import {join} from 'path';
+import { Eureka } from '../src/EurekaClient';
+import { join } from 'path';
 import merge from 'deepmerge';
 
-const expect = chai.expect;
 chai.use(sinonChai);
 
 function makeConfig(overrides = {}) {
