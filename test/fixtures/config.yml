@@ -1,0 +1,2 @@
+eureka:
+  fromFixture: true

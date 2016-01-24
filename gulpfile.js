@@ -4,6 +4,7 @@ var mocha = require('gulp-mocha');
 var eslint = require('gulp-eslint');
 var instrumenter = require('babel-istanbul').Instrumenter;
 var istanbul = require('gulp-istanbul');
+var env = require('gulp-env');
 var mochaBabel = require('babel/register');
 
 gulp.task('build', function() {
@@ -20,7 +21,12 @@ gulp.task('lint', function() {
 });
 
 gulp.task('mocha', function (cb) {
+  var envs = env.set({
+    NODE_ENV: 'test'
+  });
+
   gulp.src('src/**/*.js')
+    .pipe(envs)
     .pipe(istanbul({
       instrumenter: instrumenter
     })) // Covering files
@@ -28,8 +34,9 @@ gulp.task('mocha', function (cb) {
     .on('finish', function () {
       gulp.src(['test/**/*.js'])
         .pipe(mocha())
-        .pipe(istanbul.writeReports()) 
-        .pipe(istanbul.enforceThresholds({ thresholds: { global: 0 } })) 
+        .pipe(istanbul.writeReports())
+        .pipe(istanbul.enforceThresholds({ thresholds: { global: 0 } }))
+        .pipe(envs.reset)
         .on('end', cb);
     });
 });

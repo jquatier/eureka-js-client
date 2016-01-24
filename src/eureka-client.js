@@ -28,19 +28,23 @@ function getYaml(file) {
 
 export class Eureka {
 
-  constructor(config) {
+  constructor(config = {}) {
     // Allow passing in a custom logger:
     this.logger = config.logger || new Logger();
 
     this.logger.debug('initializing eureka client');
 
     // Load up the current working directory and the environment:
-    const cwd = process.cwd();
+    const cwd = config.cwd || process.cwd();
     const env = process.env.NODE_ENV || 'development';
 
     // Load in the configuration files:
-    this.config = merge(defaultConfig, getYaml(path.join(cwd, 'eureka-client.yml')));
-    this.config = merge(this.config, getYaml(path.join(cwd, `eureka-client-${env}.yml`)));
+    if (config.filename) {
+      this.config = merge(defaultConfig, getYaml(path.join(cwd, config.filename)));
+    } else {
+      this.config = merge(defaultConfig, getYaml(path.join(cwd, 'eureka-client.yml')));
+      this.config = merge(this.config, getYaml(path.join(cwd, `eureka-client-${env}.yml`)));
+    }
 
     // Finally, merge in the passed configuration:
     this.config = merge(this.config, config);
