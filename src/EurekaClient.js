@@ -6,7 +6,7 @@ import path from 'path';
 import dns from 'dns';
 import { series } from 'async';
 
-import AwsMetadata from './aws-metadata';
+import AwsMetadata from './AwsMetadata';
 import Logger from './Logger';
 import defaultConfig from './defaultConfig';
 
