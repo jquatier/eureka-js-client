@@ -38,13 +38,11 @@ export class Eureka {
     const cwd = config.cwd || process.cwd();
     const env = process.env.NODE_ENV || 'development';
 
+    const filename = config.filename || 'eureka-client';
+
     // Load in the configuration files:
-    if (config.filename) {
-      this.config = merge(defaultConfig, getYaml(path.join(cwd, config.filename)));
-    } else {
-      this.config = merge(defaultConfig, getYaml(path.join(cwd, 'eureka-client.yml')));
-      this.config = merge(this.config, getYaml(path.join(cwd, `eureka-client-${env}.yml`)));
-    }
+    this.config = merge(defaultConfig, getYaml(path.join(cwd, `${filename}.yml`)));
+    this.config = merge(this.config, getYaml(path.join(cwd, `${filename}-${env}.yml`)));
 
     // Finally, merge in the passed configuration:
     this.config = merge(this.config, config);

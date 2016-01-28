@@ -322,7 +322,7 @@ describe('Eureka client', () => {
     it('should support a `cwd` and `filename` property', () => {
       const client = new Eureka(makeConfig({
         cwd: join(__dirname, 'fixtures'),
-        filename: 'config.yml'
+        filename: 'config'
       }));
       expect(client.config.eureka.fromFixture).to.equal(true);
     });
