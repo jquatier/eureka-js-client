@@ -38,7 +38,7 @@ describe('Logger', () => {
       expect(logger.level()).to.equal(DEFAULT_LEVEL);
     });
 
-    it('should only log a message if the log level is higher than the log', () => {
+    it('should only log a message if the log level is higher than the level', () => {
       logger.level(100);
       const stub = sinon.stub(console, 'error');
       logger.error('Some Error');
