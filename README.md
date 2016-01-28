@@ -49,11 +49,11 @@ var client = new Eureka({
 });
 ```
 
-If you wish, you can also overwrite the name of the file that is loaded with the `filename` property. However, this disables the environment-based configuration loaded. You can mix the `cwd` and `filename` options.
+If you wish, you can also overwrite the name of the file that is loaded with the `filename` property. You can mix the `cwd` and `filename` options.
 
 ```javascript
 var client = new Eureka({
-  filename: 'eureka.yml',
+  filename: 'eureka',
   cwd: __dirname + '/config'
 });
 ```
