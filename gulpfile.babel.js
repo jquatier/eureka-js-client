@@ -13,7 +13,7 @@ gulp.task('build', () => (
 ));
 
 gulp.task('lint', () => (
-  gulp.src('src/**/*.js')
+  gulp.src(['src/**/*.js', 'test/**/*.js'])
     .pipe(eslint())
     .pipe(eslint.format())
     .pipe(eslint.failOnError())

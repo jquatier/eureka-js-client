@@ -7,12 +7,10 @@ import AwsMetadata from '../src/AwsMetadata';
 chai.use(sinonChai);
 
 describe('AWS Metadata client', () => {
-
   describe('fetchMetadata()', () => {
-
     let client;
     beforeEach(() => {
-      client = new AwsMetadata({host: '127.0.0.1:8888'});
+      client = new AwsMetadata({ host: '127.0.0.1:8888' });
     });
 
     afterEach(() => {
@@ -20,74 +18,70 @@ describe('AWS Metadata client', () => {
     });
 
     it('should call metadata URIs', () => {
-
-      let requestStub = sinon.stub(request, 'get');
-
-      requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/ami-id'
-      }).yields(null, {statusCode: 200}, 'ami-123');
+      const requestStub = sinon.stub(request, 'get');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/instance-id'
-      }).yields(null, {statusCode: 200}, 'i123');
+        url: 'http://127.0.0.1:8888/latest/meta-data/ami-id',
+      }).yields(null, { statusCode: 200 }, 'ami-123');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/instance-type'
-      }).yields(null, {statusCode: 200}, 'medium');
+        url: 'http://127.0.0.1:8888/latest/meta-data/instance-id',
+      }).yields(null, { statusCode: 200 }, 'i123');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/local-ipv4'
-      }).yields(null, {statusCode: 200}, '1.1.1.1');
+        url: 'http://127.0.0.1:8888/latest/meta-data/instance-type',
+      }).yields(null, { statusCode: 200 }, 'medium');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/local-hostname'
-      }).yields(null, {statusCode: 200}, 'ip-127-0-0-1');
+        url: 'http://127.0.0.1:8888/latest/meta-data/local-ipv4',
+      }).yields(null, { statusCode: 200 }, '1.1.1.1');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/placement/availability-zone'
-      }).yields(null, {statusCode: 200}, 'fake-1');
+        url: 'http://127.0.0.1:8888/latest/meta-data/local-hostname',
+      }).yields(null, { statusCode: 200 }, 'ip-127-0-0-1');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/public-hostname'
-      }).yields(null, {statusCode: 200}, 'ec2-127-0-0-1');
+        url: 'http://127.0.0.1:8888/latest/meta-data/placement/availability-zone',
+      }).yields(null, { statusCode: 200 }, 'fake-1');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/public-ipv4'
-      }).yields(null, {statusCode: 200}, '2.2.2.2');
+        url: 'http://127.0.0.1:8888/latest/meta-data/public-hostname',
+      }).yields(null, { statusCode: 200 }, 'ec2-127-0-0-1');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/mac'
-      }).yields(null, {statusCode: 200}, 'AB:CD:EF:GH:IJ');
+        url: 'http://127.0.0.1:8888/latest/meta-data/public-ipv4',
+      }).yields(null, { statusCode: 200 }, '2.2.2.2');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/dynamic/instance-identity/document'
-      }).yields(null, {statusCode: 200}, '{"accountId":"123456"}');
+        url: 'http://127.0.0.1:8888/latest/meta-data/mac',
+      }).yields(null, { statusCode: 200 }, 'AB:CD:EF:GH:IJ');
 
       requestStub.withArgs({
-        url:'http://127.0.0.1:8888/latest/meta-data/network/interfaces/macs/AB:CD:EF:GH:IJ/vpc-id'
-      }).yields(null, {statusCode: 200}, 'vpc123');
+        url: 'http://127.0.0.1:8888/latest/dynamic/instance-identity/document',
+      }).yields(null, { statusCode: 200 }, '{"accountId":"123456"}');
 
-      let fetchCb = sinon.spy();
+      requestStub.withArgs({
+        url: 'http://127.0.0.1:8888/latest/meta-data/network/interfaces/macs/AB:CD:EF:GH:IJ/vpc-id',
+      }).yields(null, { statusCode: 200 }, 'vpc123');
+
+      const fetchCb = sinon.spy();
       client.fetchMetadata(fetchCb);
 
       expect(request.get).to.have.been.callCount(11);
 
       expect(fetchCb).to.have.been.calledWithMatch({
-        'accountId': '123456',
+        accountId: '123456',
         'ami-id': 'ami-123',
         'availability-zone': 'fake-1',
         'instance-id': 'i123',
         'instance-type': 'medium',
         'local-hostname': 'ip-127-0-0-1',
         'local-ipv4': '1.1.1.1',
-        'mac': 'AB:CD:EF:GH:IJ',
+        mac: 'AB:CD:EF:GH:IJ',
         'public-hostname': 'ec2-127-0-0-1',
         'public-ipv4': '2.2.2.2',
-        'vpc-id': 'vpc123'
+        'vpc-id': 'vpc123',
       });
-
     });
-
   });
-
 });

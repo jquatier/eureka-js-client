@@ -28,7 +28,7 @@ function getYaml(file) {
   return yml;
 }
 
-export class Eureka {
+export default class Eureka {
 
   constructor(config = {}) {
     // Allow passing in a custom logger:
@@ -349,12 +349,12 @@ export class Eureka {
       this.config.instance.ipAddr = metadataResult['public-ipv4'];
 
       if (this.config.instance.statusPageUrl) {
-        const statusPageUrl = this.config.instance.statusPageUrl;
+        const { statusPageUrl } = this.config.instance;
         const replacedUrl = statusPageUrl.replace('__HOST__', metadataResult['public-hostname']);
         this.config.instance.statusPageUrl = replacedUrl;
       }
       if (this.config.instance.healthCheckUrl) {
-        const healthCheckUrl = this.config.instance.healthCheckUrl;
+        const { healthCheckUrl } = this.config.instance;
         const replacedUrl = healthCheckUrl.replace('__HOST__', metadataResult['public-hostname']);
         this.config.instance.healthCheckUrl = replacedUrl;
       }

@@ -1,24 +1,33 @@
+/* eslint-disable no-unused-expressions */
 import sinon from 'sinon';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 import request from 'request';
 import dns from 'dns';
-import { Eureka } from '../src/EurekaClient';
 import { join } from 'path';
 import merge from 'deepmerge';
+
+import Eureka from '../src/EurekaClient';
 
 chai.use(sinonChai);
 
 function makeConfig(overrides = {}) {
   const config = {
-    instance: {app: 'app', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name: 'Amazon'}},
-    eureka: {host: '127.0.0.1', port: 9999}
+    instance: {
+      app: 'app',
+      vipAddress: '1.2.2.3',
+      hostName: 'myhost',
+      port: 9999,
+      dataCenterInfo: {
+        name: 'MyOwn',
+      },
+    },
+    eureka: { host: '127.0.0.1', port: 9999 },
   };
   return merge(config, overrides);
 }
 
 describe('Eureka client', () => {
-
   describe('Eureka()', () => {
     it('should throw an error if no config is found', () => {
       function fn() {
@@ -38,13 +47,13 @@ describe('Eureka client', () => {
             vipAddress: true,
             port: true,
             dataCenterInfo: {
-              name: 'MyOwn'
-            }
+              name: 'MyOwn',
+            },
           },
           eureka: {
             host: true,
-            port: true
-          }
+            port: true,
+          },
         });
       }
 
@@ -55,13 +64,13 @@ describe('Eureka client', () => {
             vipAddress: true,
             port: true,
             dataCenterInfo: {
-              name: 'MyOwn'
-            }
+              name: 'MyOwn',
+            },
           },
           eureka: {
             host: true,
-            port: true
-          }
+            port: true,
+          },
         });
       }
 
@@ -72,35 +81,28 @@ describe('Eureka client', () => {
   });
 
   describe('get instanceId()', () => {
-
     it('should return hostname for non-AWS datacenters', () => {
-      let config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
-      let client = new Eureka(config);
+      const config = makeConfig();
+      const client = new Eureka(config);
       expect(client.instanceId).to.equal('myhost');
     });
 
     it('should return instance ID for AWS datacenters', () => {
-      let config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'Amazon', metadata: {'instance-id': 'i123'}}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
-      let client = new Eureka(config);
+      const config = makeConfig({
+        instance: { dataCenterInfo: { name: 'Amazon', metadata: { 'instance-id': 'i123' } } },
+      });
+      const client = new Eureka(config);
       expect(client.instanceId).to.equal('i123');
     });
-
   });
 
   describe('start()', () => {
-
-    let config, client, registerSpy, fetchRegistrySpy;
+    let config;
+    let client;
+    let registerSpy;
+    let fetchRegistrySpy;
     before(() => {
-      config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
       registerSpy = sinon.stub(client, 'register').callsArg(0);
       fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
@@ -112,23 +114,20 @@ describe('Eureka client', () => {
     });
 
     it('should call register and fetch registry', (done) => {
-      client.start(function() {
+      client.start(() => {
         expect(registerSpy).to.have.been.calledOnce;
         expect(fetchRegistrySpy).to.have.been.calledOnce;
         done();
       });
     });
-
   });
 
   describe('stop()', () => {
-
-    let config, client, deregisterSpy;
+    let config;
+    let client;
+    let deregisterSpy;
     before(() => {
-      config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
       deregisterSpy = sinon.stub(client, 'deregister').callsArg(0);
     });
@@ -138,23 +137,21 @@ describe('Eureka client', () => {
     });
 
     it('should call deregister', () => {
-      let stopCb = sinon.spy();
+      const stopCb = sinon.spy();
       client.stop(stopCb);
 
       expect(deregisterSpy).to.have.been.calledOnce;
       expect(stopCb).to.have.been.calledOnce;
     });
-
   });
 
   describe('register()', () => {
-
-    let config, client, heartbeatsSpy, registryFetchSpy;
+    let config;
+    let client;
+    let heartbeatsSpy;
+    let registryFetchSpy;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
       heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
       registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
@@ -167,9 +164,8 @@ describe('Eureka client', () => {
     });
 
     it('should call register URI, and initiate heartbeats / registry fetches', () => {
-
-      sinon.stub(request, 'post').yields(null, {statusCode: 204}, null)
-      let registerCb = sinon.spy();
+      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
+      const registerCb = sinon.spy();
       client.register(registerCb);
 
       expect(request.post).to.have.been.calledWithMatch({
@@ -180,55 +176,48 @@ describe('Eureka client', () => {
             dataCenterInfo: { name: 'MyOwn' },
             port: 9999,
             status: 'UP',
-            vipAddress: '1.2.2.3'
-          }
+            vipAddress: '1.2.2.3',
+          },
         },
         json: true,
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app'
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
       });
 
       expect(heartbeatsSpy).to.have.been.calledOnce;
       expect(registryFetchSpy).to.have.been.calledOnce;
       expect(registerCb).to.have.been.calledWithMatch(null);
-
     });
 
     it('should throw error for non-204 response', () => {
-
-      sinon.stub(request, 'post').yields(null, {statusCode: 500}, null);
-      let registerCb = sinon.spy();
+      sinon.stub(request, 'post').yields(null, { statusCode: 500 }, null);
+      const registerCb = sinon.spy();
       client.register(registerCb);
 
-      expect(registerCb).to.have.been.calledWithMatch({message:'eureka registration FAILED: status: 500 body: null'});
+      expect(registerCb).to.have.been.calledWithMatch({
+        message: 'eureka registration FAILED: status: 500 body: null',
+      });
 
       expect(heartbeatsSpy).to.have.callCount(0);
       expect(registryFetchSpy).to.have.callCount(0);
-
     });
 
     it('should throw error for request error', () => {
-
       sinon.stub(request, 'post').yields(new Error('request error'), null, null);
-      let registerCb = sinon.spy();
+      const registerCb = sinon.spy();
       client.register(registerCb);
 
-      expect(registerCb).to.have.been.calledWithMatch({message:'request error'});
+      expect(registerCb).to.have.been.calledWithMatch({ message: 'request error' });
 
       expect(heartbeatsSpy).to.have.callCount(0);
       expect(registryFetchSpy).to.have.callCount(0);
-
     });
-
   });
 
   describe('deregister()', () => {
-
-    let config, client;
+    let config;
+    let client;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
     });
 
@@ -237,46 +226,41 @@ describe('Eureka client', () => {
     });
 
     it('should call deregister URI', () => {
-      sinon.stub(request, 'del').yields(null, {statusCode: 200}, null);;
-      let deregisterCb = sinon.spy();
+      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
       expect(request.del).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost'
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
       });
 
       expect(deregisterCb).to.have.been.calledWithMatch(null);
-
     });
 
     it('should throw error for non-200 response', () => {
-      sinon.stub(request, 'del').yields(null, {statusCode: 500}, null);;
-      let deregisterCb = sinon.spy();
+      sinon.stub(request, 'del').yields(null, { statusCode: 500 }, null);
+      const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
-      expect(deregisterCb).to.have.been.calledWithMatch({message:'eureka deregistration FAILED: status: 500 body: null'});
-
+      expect(deregisterCb).to.have.been.calledWithMatch({
+        message: 'eureka deregistration FAILED: status: 500 body: null',
+      });
     });
 
     it('should throw error for request error', () => {
       sinon.stub(request, 'del').yields(new Error('request error'), null, null);
-      let deregisterCb = sinon.spy();
+      const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
-      expect(deregisterCb).to.have.been.calledWithMatch({message:'request error'});
-
+      expect(deregisterCb).to.have.been.calledWithMatch({ message: 'request error' });
     });
-
   });
 
   describe('renew()', () => {
-
-    let config, client;
+    let config;
+    let client;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
     });
 
@@ -285,15 +269,13 @@ describe('Eureka client', () => {
     });
 
     it('should call heartbeat URI', () => {
-      sinon.stub(request, 'put').yields(null, {statusCode: 200}, null)
+      sinon.stub(request, 'put').yields(null, { statusCode: 200 }, null);
       client.renew();
 
       expect(request.put).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost'
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
       });
-
     });
-
   });
 
   describe('eureka-client.yml', () => {
@@ -308,7 +290,6 @@ describe('Eureka client', () => {
 
     it('should load the correct', () => {
       const client = new Eureka(makeConfig());
-      console.log(client.config);
       expect(client.config.eureka.custom).to.equal('test');
     });
 
@@ -321,20 +302,18 @@ describe('Eureka client', () => {
     it('should support a `cwd` and `filename` property', () => {
       const client = new Eureka(makeConfig({
         cwd: join(__dirname, 'fixtures'),
-        filename: 'config'
+        filename: 'config',
       }));
       expect(client.config.eureka.fromFixture).to.equal(true);
     });
   });
 
   describe('validateConfig()', () => {
-
     let config;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name: 'Amazon'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig({
+        instance: { dataCenterInfo: { name: 'Amazon' } },
+      });
     });
 
     it('should throw an exception with a missing instance.app', () => {
@@ -384,17 +363,13 @@ describe('Eureka client', () => {
       }
       expect(badConfig).to.throw(TypeError);
     });
-
   });
 
   describe('getInstancesByAppId()', () => {
-
-    let client, config;
+    let client;
+    let config;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name: 'Amazon'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
     });
 
@@ -406,32 +381,28 @@ describe('Eureka client', () => {
     });
 
     it('should return a list of instances if appId is registered', () => {
-      let appId = 'theservicename'.toUpperCase();
-      let expectedInstances = [{host: '127.0.0.1'}];
+      const appId = 'THESERVICENAME';
+      const expectedInstances = [{ host: '127.0.0.1' }];
       client.cache.app[appId] = expectedInstances;
-      let actualInstances = client.getInstancesByAppId(appId);
+      const actualInstances = client.getInstancesByAppId(appId);
       expect(actualInstances).to.equal(expectedInstances);
     });
 
     it('should throw an error if no instances were found for given appId', () => {
-      let appId = 'theservicename'.toUpperCase();
+      const appId = 'THESERVICENAME';
       client.cache.app[appId] = null;
       function shouldThrow() {
-        client.getInstancesByAppId(appId)
+        client.getInstancesByAppId(appId);
       }
       expect(shouldThrow).to.throw();
     });
-
   });
 
   describe('getInstancesByVipAddress()', () => {
-
-    let client, config;
+    let client;
+    let config;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: {name: 'Amazon'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
     });
 
@@ -443,34 +414,30 @@ describe('Eureka client', () => {
     });
 
     it('should return a list of instances if vipAddress is registered', () => {
-      let vipAddress = 'the.vip.address';
-      let expectedInstances = [{host: '127.0.0.1'}];
+      const vipAddress = 'the.vip.address';
+      const expectedInstances = [{ host: '127.0.0.1' }];
       client.cache.vip[vipAddress] = expectedInstances;
-      let actualInstances = client.getInstancesByVipAddress(vipAddress);
+      const actualInstances = client.getInstancesByVipAddress(vipAddress);
       expect(actualInstances).to.equal(expectedInstances);
     });
 
     it('should throw an error if no instances were found for given vipAddress', () => {
-      let vipAddress = 'the.vip.address';
+      const vipAddress = 'the.vip.address';
       client.cache.vip[vipAddress] = null;
       function shouldThrow() {
-        client.getInstancesByVipAddress(vipAddress)
+        client.getInstancesByVipAddress(vipAddress);
       }
       expect(shouldThrow).to.throw();
     });
-
   });
 
   describe('fetchRegistry()', () => {
-
-    let config, client, transformRegistrySpy;
+    let config;
+    let client;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
-      transformRegistrySpy = sinon.stub(client, 'transformRegistry');
+      sinon.stub(client, 'transformRegistry');
     });
 
     afterEach(() => {
@@ -479,52 +446,48 @@ describe('Eureka client', () => {
     });
 
     it('should call registry URI', () => {
-
-      sinon.stub(request, 'get').yields(null, {statusCode: 200}, null)
-      let registryCb = sinon.spy();
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
       expect(request.get).to.have.been.calledWithMatch({
         url: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        headers: { Accept: 'application/json' }
+        headers: { Accept: 'application/json' },
       });
 
       expect(registryCb).to.have.been.calledWithMatch(null);
-
     });
 
     it('should throw error for non-200 response', () => {
-
-      sinon.stub(request, 'get').yields(null, {statusCode: 500}, null);
-      let registryCb = sinon.spy();
+      sinon.stub(request, 'get').yields(null, { statusCode: 500 }, null);
+      const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
-      expect(registryCb).to.have.been.calledWithMatch({message:'Unable to retrieve registry from Eureka server'});
-
+      expect(registryCb).to.have.been.calledWithMatch({
+        message: 'Unable to retrieve registry from Eureka server',
+      });
     });
 
     it('should throw error for request error', () => {
-
       sinon.stub(request, 'get').yields(new Error('request error'), null, null);
-      let registryCb = sinon.spy();
+      const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
-      expect(registryCb).to.have.been.calledWithMatch({message:'request error'});
-
+      expect(registryCb).to.have.been.calledWithMatch({ message: 'request error' });
     });
-
   });
 
   describe('transformRegistry()', () => {
-
-    let client, config, registry, app1, app2, transformSpy;
+    let client;
+    let config;
+    let registry;
+    let app1;
+    let app2;
+    let transformSpy;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: {name: 'Amazon'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       registry = {
-        applications: {application: {}}
+        applications: { application: {} },
       };
       app1 = {};
       app2 = {};
@@ -561,22 +524,24 @@ describe('Eureka client', () => {
       client.transformRegistry(registry);
       expect(transformSpy.callCount).to.equal(2);
     });
-
   });
 
   describe('transformApp()', () => {
-
-    let client, config, app, instance1, instance2, theVip;
+    let client;
+    let config;
+    let app;
+    let instance1;
+    let instance2;
+    let theVip;
     beforeEach(() => {
-      config = {
-        instance: {app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: {name: 'Amazon'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig({
+        instance: { dataCenterInfo: { name: 'Amazon' } },
+      });
       client = new Eureka(config);
       theVip = 'theVip';
-      instance1 = {host: '127.0.0.1', port: 1000, vipAddress: theVip};
-      instance2 = {host: '127.0.0.2', port: 2000, vipAddress: theVip};
-      app = {name: 'theapp'};
+      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: theVip };
+      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: theVip };
+      app = { name: 'theapp' };
     });
 
     it('should transform an app with one instance', () => {
@@ -595,23 +560,24 @@ describe('Eureka client', () => {
   });
 
   describe('addInstanceMetadata()', () => {
-
-    let client, config, metadataSpy;
+    let client;
+    let config;
+    let metadataSpy;
     beforeEach(() => {
       config = {
         instance: {
-          app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: { name: 'Amazon'},
+          app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: { name: 'Amazon' },
           statusPageUrl: 'http://__HOST__:8080/',
           healthCheckUrl: 'http://__HOST__:8077/healthcheck',
         },
-        eureka: {host: '127.0.0.1', port: 9999}
+        eureka: { host: '127.0.0.1', port: 9999 },
       };
       client = new Eureka(config);
       metadataSpy = sinon.spy();
 
       sinon.stub(client.metadataClient, 'fetchMetadata').yields({
         'public-hostname': 'ec2-127-0-0-1.us-fake-1.mydomain.com',
-        'public-ipv4': '54.54.54.54'
+        'public-ipv4': '54.54.54.54',
       });
     });
 
@@ -626,23 +592,23 @@ describe('Eureka client', () => {
       expect(client.config.instance.statusPageUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8080/');
       expect(client.config.instance.healthCheckUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8077/healthcheck');
     });
-
   });
 
   describe('locateEurekaHostUsingDns()', () => {
-
-    let config, client;
-    let eurekaHosts = ['1a.eureka.mydomain.com','1b.eureka.mydomain.com','1c.eureka.mydomain.com'];
+    let config;
+    let client;
+    const eurekaHosts = [
+      '1a.eureka.mydomain.com',
+      '1b.eureka.mydomain.com',
+      '1c.eureka.mydomain.com',
+    ];
 
     afterEach(() => {
       dns.resolveTxt.restore();
     });
 
     it('should throw error when ec2Region is undefined', () => {
-      config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: '127.0.0.1', port: 9999}
-      };
+      config = makeConfig();
       client = new Eureka(config);
 
       sinon.stub(dns, 'resolveTxt').yields(null, []);
@@ -653,24 +619,22 @@ describe('Eureka client', () => {
     });
 
     it('should lookup server list using DNS', () => {
-      config = {
-        instance: {app: 'app', hostName: 'myhost', vipAddress: '1.2.2.3', port: 9999, dataCenterInfo: {name:'MyOwn'}},
-        eureka: {host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region'}
-      };
+      config = makeConfig({
+        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
+      });
       client = new Eureka(config);
 
-      let locateCb = sinon.spy();
-      let resolveStub = sinon.stub(dns, 'resolveTxt');
+      const locateCb = sinon.spy();
+      const resolveStub = sinon.stub(dns, 'resolveTxt');
       resolveStub.onCall(0).yields(null, [eurekaHosts]);
       resolveStub.onCall(1).yields(null, [['1.2.3.4']]);
       client.locateEurekaHostUsingDns(locateCb);
 
       expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
-      expect(dns.resolveTxt).to.have.been.calledWith(sinon.match(function(value) {
-        return eurekaHosts.indexOf(value);
-      }));
+      expect(dns.resolveTxt).to.have.been.calledWith(
+        sinon.match(value => eurekaHosts.indexOf(value))
+      );
       expect(locateCb).to.have.been.calledWithMatch('1.2.3.4');
     });
   });
-
 });

@@ -6,9 +6,7 @@ const DEFAULT_LEVEL = 30;
 
 describe('Logger', () => {
   it('should construct with no args', () => {
-    expect(() => {
-      return new Logger();
-    }).to.not.throw();
+    expect(() => new Logger()).to.not.throw();
   });
 
   describe('Logger Instance', () => {
@@ -57,9 +55,7 @@ describe('Logger', () => {
         logger.level(-1);
       });
 
-      const stubConsole = method => {
-        return sinon.stub(console, method);
-      };
+      const stubConsole = method => sinon.stub(console, method);
 
       it('should call console.log with debug', () => {
         const stub = stubConsole('log');
