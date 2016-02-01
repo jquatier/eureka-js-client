@@ -151,12 +151,18 @@ export default class Eureka {
   */
   register(callback = noop) {
     this.config.instance.status = 'UP';
+    const connectionTimeout = setTimeout(() => {
+      this.logger.warn('It looks like it\'s taking a while to register with ' +
+      'Eureka. This usually means there is an issue connecting to the host ' +
+      'specified. Start application with NODE_DEBUG=request for more logging.');
+    }, 10000);
     this.buildEurekaUrl(eurekaUrl => {
       request.post({
         url: eurekaUrl + this.config.instance.app,
         json: true,
         body: { instance: this.config.instance },
       }, (error, response, body) => {
+        clearTimeout(connectionTimeout);
         if (!error && response.statusCode === 204) {
           this.logger.info(
             'registered with eureka: ',

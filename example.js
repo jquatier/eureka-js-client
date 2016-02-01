@@ -1,7 +1,8 @@
-var Eureka = require('eureka-js-client').Eureka;
+// assuming no transpiler here
+const Eureka = require('eureka-js-client').Eureka;
 
 // example configuration
-var client = new Eureka({
+const client = new Eureka({
   // application instance information
   instance: {
     app: 'jqservice',
@@ -10,16 +11,16 @@ var client = new Eureka({
     port: 8080,
     vipAddress: 'jq.test.something.com',
     dataCenterInfo: {
-      name: 'MyOwn'
+      name: 'MyOwn',
     }
   },
   eureka: {
     // eureka server host / port
     host: '192.168.99.100',
-    port: 32768
+    port: 32768,
   }
 });
 client.logger.level('debug');
 client.start(function(error){
-  console.log(error);
+  console.log(error || 'complete');
 });
