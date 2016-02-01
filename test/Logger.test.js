@@ -1,14 +1,12 @@
 import sinon from 'sinon';
-import {expect} from 'chai';
-import {Logger} from '../src/Logger.js';
+import { expect } from 'chai';
+import Logger from '../src/Logger.js';
 
 const DEFAULT_LEVEL = 30;
 
 describe('Logger', () => {
   it('should construct with no args', () => {
-    expect(() => {
-      return new Logger();
-    }).to.not.throw();
+    expect(() => new Logger()).to.not.throw();
   });
 
   describe('Logger Instance', () => {
@@ -40,7 +38,7 @@ describe('Logger', () => {
       expect(logger.level()).to.equal(DEFAULT_LEVEL);
     });
 
-    it('should only log a message if the log level is higher than the log', () => {
+    it('should only log a message if the log level is higher than the level', () => {
       logger.level(100);
       const stub = sinon.stub(console, 'error');
       logger.error('Some Error');
@@ -57,9 +55,7 @@ describe('Logger', () => {
         logger.level(-1);
       });
 
-      const stubConsole = method => {
-        return sinon.stub(console, method);
-      };
+      const stubConsole = method => sinon.stub(console, method);
 
       it('should call console.log with debug', () => {
         const stub = stubConsole('log');

@@ -1,11 +1,12 @@
 import request from 'request';
 import async from 'async';
-import {Logger} from './Logger';
+import Logger from './Logger';
 
 /*
-  Utility class for pulling AWS metadata that Eureka requires when registering as an Amazon instance (datacenter).
+  Utility class for pulling AWS metadata that Eureka requires when
+  registering as an Amazon instance (datacenter).
 */
-export class AwsMetadata {
+export default class AwsMetadata {
 
   constructor(config = {}) {
     this.logger = config.logger || new Logger();
@@ -46,10 +47,10 @@ export class AwsMetadata {
         this.lookupInstanceIdentity((error, identity) => {
           callback(null, identity ? identity.accountId : null);
         });
-      }
+      },
     }, (error, results) => {
       // we need the mac before we can lookup the vpcId...
-      this.lookupMetadataKey('network/interfaces/macs/' + results.mac + '/vpc-id', (error, vpcId) => {
+      this.lookupMetadataKey(`network/interfaces/macs/${results.mac}/vpc-id`, (err, vpcId) => {
         results['vpc-id'] = vpcId;
         this.logger.debug('Found Instance AWS Metadata', results);
         resultsCallback(results);
@@ -59,7 +60,7 @@ export class AwsMetadata {
 
   lookupMetadataKey(key, callback) {
     request.get({
-      url: `http://${this.host}/latest/meta-data/${key}`
+      url: `http://${this.host}/latest/meta-data/${key}`,
     }, (error, response, body) => {
       if (error) {
         this.logger.error('Error requesting metadata key', error);
@@ -70,7 +71,7 @@ export class AwsMetadata {
 
   lookupInstanceIdentity(callback) {
     request.get({
-      url: `http://${this.host}/latest/dynamic/instance-identity/document`
+      url: `http://${this.host}/latest/dynamic/instance-identity/document`,
     }, (error, response, body) => {
       if (error) {
         this.logger.error('Error requesting instance identity document', error);
