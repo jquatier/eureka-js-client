@@ -230,7 +230,7 @@ export default class Eureka {
           }
           this.logger.warn(
             'eureka heartbeat FAILED, will retry.',
-            `status: ${response.statusCode} body: ${body}`
+            `status: ${response ? response.statusCode : 'unknown'} body: ${body}`
           );
         }
       });
