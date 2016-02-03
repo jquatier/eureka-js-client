@@ -388,13 +388,8 @@ describe('Eureka client', () => {
       expect(actualInstances).to.equal(expectedInstances);
     });
 
-    it('should throw an error if no instances were found for given appId', () => {
-      const appId = 'THESERVICENAME';
-      client.cache.app[appId] = null;
-      function shouldThrow() {
-        client.getInstancesByAppId(appId);
-      }
-      expect(shouldThrow).to.throw();
+    it('should return undefined no instances were found for given appId', () => {
+      expect(client.getInstancesByAppId('THESERVICENAME')).to.equal(undefined);
     });
   });
 
@@ -421,13 +416,8 @@ describe('Eureka client', () => {
       expect(actualInstances).to.equal(expectedInstances);
     });
 
-    it('should throw an error if no instances were found for given vipAddress', () => {
-      const vipAddress = 'the.vip.address';
-      client.cache.vip[vipAddress] = null;
-      function shouldThrow() {
-        client.getInstancesByVipAddress(vipAddress);
-      }
-      expect(shouldThrow).to.throw();
+    it('should return undefined no instances were found for given vipAddress', () => {
+      expect(client.getInstancesByVipAddress('the.vip.address')).to.equal(undefined);
     });
   });
 
@@ -481,29 +471,22 @@ describe('Eureka client', () => {
     let client;
     let config;
     let registry;
+    let instance1;
+    let instance2;
+    let instance3;
     let app1;
     let app2;
-    let transformSpy;
     beforeEach(() => {
       config = makeConfig();
       registry = {
         applications: { application: {} },
       };
-      app1 = {};
-      app2 = {};
+      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: 'vip1' };
+      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2' };
+      instance3 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2' };
+      app1 = { name: 'theapp', instance: instance1 };
+      app2 = { name: 'theapptwo', instance: [instance2, instance3] };
       client = new Eureka(config);
-      transformSpy = sinon.stub(client, 'transformApp');
-    });
-
-    afterEach(() => {
-      transformSpy.restore();
-    });
-
-    it('should throw an error if no registry is provided', () => {
-      function noRegistry() {
-        client.transformRegistry();
-      }
-      expect(noRegistry).to.throw();
     });
 
     it('should return clear the cache if no applications exist', () => {
@@ -516,13 +499,15 @@ describe('Eureka client', () => {
     it('should transform a registry with one app', () => {
       registry.applications.application = app1;
       client.transformRegistry(registry);
-      expect(transformSpy.callCount).to.equal(1);
+      expect(client.cache.app[app1.name.toUpperCase()].length).to.equal(1);
+      expect(client.cache.vip[instance1.vipAddress].length).to.equal(1);
     });
 
     it('should transform a registry with two or more apps', () => {
       registry.applications.application = [app1, app2];
       client.transformRegistry(registry);
-      expect(transformSpy.callCount).to.equal(2);
+      expect(client.cache.app[app2.name.toUpperCase()].length).to.equal(2);
+      expect(client.cache.vip[instance2.vipAddress].length).to.equal(2);
     });
   });
 
@@ -533,6 +518,7 @@ describe('Eureka client', () => {
     let instance1;
     let instance2;
     let theVip;
+    let cache;
     beforeEach(() => {
       config = makeConfig({
         instance: { dataCenterInfo: { name: 'Amazon' } },
@@ -542,20 +528,21 @@ describe('Eureka client', () => {
       instance1 = { host: '127.0.0.1', port: 1000, vipAddress: theVip };
       instance2 = { host: '127.0.0.2', port: 2000, vipAddress: theVip };
       app = { name: 'theapp' };
+      cache = { app: {}, vip: {} };
     });
 
     it('should transform an app with one instance', () => {
       app.instance = instance1;
-      client.transformApp(app);
-      expect(client.cache.app[app.name.toUpperCase()].length).to.equal(1);
-      expect(client.cache.vip[theVip].length).to.equal(1);
+      client.transformApp(app, cache);
+      expect(cache.app[app.name.toUpperCase()].length).to.equal(1);
+      expect(cache.vip[theVip].length).to.equal(1);
     });
 
     it('should transform an app with two or more instances', () => {
       app.instance = [instance1, instance2];
-      client.transformApp(app);
-      expect(client.cache.app[app.name.toUpperCase()].length).to.equal(2);
-      expect(client.cache.vip[theVip].length).to.equal(2);
+      client.transformApp(app, cache);
+      expect(cache.app[app.name.toUpperCase()].length).to.equal(2);
+      expect(cache.vip[theVip].length).to.equal(2);
     });
   });
 

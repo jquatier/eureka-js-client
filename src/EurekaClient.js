@@ -256,7 +256,7 @@ export default class Eureka {
     }
     const instances = this.cache.app[appId.toUpperCase()];
     if (!instances) {
-      throw new Error(`Unable to retrieve instances for appId: ${appId}`);
+      this.logger.debug(`Unable to retrieve instances for appId: ${appId}`);
     }
     return instances;
   }
@@ -270,7 +270,7 @@ export default class Eureka {
     }
     const instances = this.cache.vip[vipAddress];
     if (!instances) {
-      throw new Error(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
+      this.logger.debug(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
     return instances;
   }
@@ -303,19 +303,21 @@ export default class Eureka {
    */
   transformRegistry(registry) {
     if (!registry) {
-      throw new Error('Unable to transform empty registry');
-    }
-    this.cache = { app: {}, vip: {} };
-    if (!registry.applications.application) {
-      return;
-    }
-    if (registry.applications.application.length) {
-      for (let i = 0; i < registry.applications.application.length; i++) {
-        const app = registry.applications.application[i];
-        this.transformApp(app);
-      }
+      this.logger.warn('Unable to transform empty registry');
     } else {
-      this.transformApp(registry.applications.application);
+      const newCache = { app: {}, vip: {} };
+      if (!registry.applications.application) {
+        return;
+      }
+      if (registry.applications.application.length) {
+        for (let i = 0; i < registry.applications.application.length; i++) {
+          const app = registry.applications.application[i];
+          this.transformApp(app, newCache);
+        }
+      } else {
+        this.transformApp(registry.applications.application, newCache);
+      }
+      this.cache = newCache;
     }
   }
 
@@ -323,14 +325,14 @@ export default class Eureka {
     Transforms the given application and places in client cache. If an application
       has a single instance, the instance is placed into the cache as an array of one
    */
-  transformApp(app) {
+  transformApp(app, cache) {
     if (app.instance.length) {
-      this.cache.app[app.name.toUpperCase()] = app.instance;
-      this.cache.vip[app.instance[0].vipAddress] = app.instance;
+      cache.app[app.name.toUpperCase()] = app.instance;
+      cache.vip[app.instance[0].vipAddress] = app.instance;
     } else {
       const instances = [app.instance];
-      this.cache.vip[app.instance.vipAddress] = instances;
-      this.cache.app[app.name.toUpperCase()] = instances;
+      cache.vip[app.instance.vipAddress] = instances;
+      cache.app[app.name.toUpperCase()] = instances;
     }
   }
 
