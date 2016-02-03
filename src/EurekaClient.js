@@ -256,7 +256,7 @@ export default class Eureka {
     }
     const instances = this.cache.app[appId.toUpperCase()];
     if (!instances) {
-      this.logger.debug(`Unable to retrieve instances for appId: ${appId}`);
+      this.logger.warn(`Unable to retrieve instances for appId: ${appId}`);
     }
     return instances;
   }
@@ -270,7 +270,7 @@ export default class Eureka {
     }
     const instances = this.cache.vip[vipAddress];
     if (!instances) {
-      this.logger.debug(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
+      this.logger.warn(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
     return instances;
   }
