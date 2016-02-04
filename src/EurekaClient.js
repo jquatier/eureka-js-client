@@ -305,15 +305,14 @@ export default class Eureka {
     if (!registry) {
       this.logger.warn('Unable to transform empty registry');
     } else {
-      const newCache = { app: {}, vip: {} };
       if (!registry.applications.application) {
         return;
       }
+      const newCache = { app: {}, vip: {} };
       if (registry.applications.application.length) {
-        for (let i = 0; i < registry.applications.application.length; i++) {
-          const app = registry.applications.application[i];
+        registry.applications.application.forEach((app) => {
           this.transformApp(app, newCache);
-        }
+        });
       } else {
         this.transformApp(registry.applications.application, newCache);
       }
