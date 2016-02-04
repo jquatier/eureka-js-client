@@ -309,7 +309,7 @@ export default class Eureka {
         return;
       }
       const newCache = { app: {}, vip: {} };
-      if (registry.applications.application.length) {
+      if (Array.isArray(registry.applications.application)) {
         registry.applications.application.forEach((app) => {
           this.transformApp(app, newCache);
         });
