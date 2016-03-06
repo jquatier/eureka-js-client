@@ -81,6 +81,17 @@ describe('Eureka client', () => {
   });
 
   describe('get instanceId()', () => {
+    it('should return the configured instance id', () => {
+      const instanceId = 'test_id';
+      const config = makeConfig({
+        instance: {
+          id: instanceId,
+        },
+      });
+      const client = new Eureka(config);
+      expect(client.instanceId).to.equal(instanceId);
+    });
+
     it('should return hostname for non-AWS datacenters', () => {
       const config = makeConfig();
       const client = new Eureka(config);
