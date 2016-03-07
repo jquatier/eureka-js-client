@@ -6,6 +6,9 @@ node_js:
   - "iojs"
   - "stable"
 
+script:
+  - npm run integration
+
 after_script:
   - npm run coveralls
 
