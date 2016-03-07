@@ -17,7 +17,13 @@ describe('Integration Test', () => {
         },
       },
       eureka: {
+        heartbeatInterval: 30000,
+        registryFetchInterval: 30000,
         fetchRegistry: true,
+        servicePath: '/eureka/v2/apps/',
+        ssl: false,
+        useDns: false,
+        fetchMetadata: true,
         host: 'localhost',
         port: 8080,
       },
