@@ -69,8 +69,8 @@ export default class Eureka {
     instance-id in the metadata. Else, it's the hostName.
   */
   get instanceId() {
-    if (this.config.instance.id) {
-      return this.config.instance.id;
+    if (this.config.instance.instanceId) {
+      return this.config.instance.instanceId;
     } else if (this.amazonDataCenter) {
       return this.config.instance.dataCenterInfo.metadata['instance-id'];
     }

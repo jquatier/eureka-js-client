@@ -85,7 +85,7 @@ describe('Eureka client', () => {
       const instanceId = 'test_id';
       const config = makeConfig({
         instance: {
-          id: instanceId,
+          instanceId: instanceId,
         },
       });
       const client = new Eureka(config);
