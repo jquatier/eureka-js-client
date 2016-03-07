@@ -45,7 +45,8 @@ gulp.task('docker:run', function(cb) {
   exec('docker run -d -p 8080:8080 --name eureka netflixoss/eureka:1.3.1', (error, stdout, stderr) => {
     console.log(stdout);
     console.log(stderr);
-    cb();
+    console.log('Sleeping for 60 seconds...')
+    setTimeout(cb, 60000);
   });
 });
 
