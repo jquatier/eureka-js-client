@@ -18,7 +18,7 @@ describe('Integration Test', () => {
       },
       eureka: {
         fetchRegistry: true,
-        host: '192.168.99.100',
+        host: 'localhost',
         port: 8080,
       },
     };
