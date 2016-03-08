@@ -52,7 +52,7 @@ gulp.task('docker:run', function(cb) {
 
 gulp.task('test:integration', ['docker:run'], () => {
   return gulp.src('test/integration.test.js')
-    .pipe(mocha({ timeout:60000 }));
+    .pipe(mocha({ timeout:120000 }));
 });
 
 gulp.task('test', ['lint', 'mocha']);
