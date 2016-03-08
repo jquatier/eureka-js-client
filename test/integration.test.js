@@ -4,7 +4,7 @@ import { expect } from 'chai';
 describe('Integration Test', () => {
   let client;
   let config;
-  before(() => {
+  before((done) => {
     config = {
       instance: {
         app: 'jqservice',
@@ -18,7 +18,7 @@ describe('Integration Test', () => {
       },
       eureka: {
         heartbeatInterval: 30000,
-        registryFetchInterval: 30000,
+        registryFetchInterval: 5000,
         fetchRegistry: true,
         servicePath: '/eureka/v2/apps/',
         ssl: false,
@@ -29,10 +29,10 @@ describe('Integration Test', () => {
       },
     };
     client = new Eureka(config);
-  });
-
-  it('should register one instance with Eureka', (done) => {
-    client.start(done);
+    client.start(() => {
+      console.log('Sleeping 30 seconds for registry to refresh...')
+      setTimeout(done, 30000);
+    });
   });
 
   it('should be able to get instance by the app id', () => {
@@ -45,7 +45,7 @@ describe('Integration Test', () => {
     expect(instances.length).to.equal(1);
   });
 
-  it('should be able to deregister with Eureka server', (done) => {
+  after((done) => {
     client.stop(done);
   });
 });

@@ -45,14 +45,14 @@ gulp.task('docker:run', function(cb) {
   exec('docker run -d -p 8080:8080 --name eureka netflixoss/eureka:1.3.1', (error, stdout, stderr) => {
     console.log(stdout);
     console.log(stderr);
-    console.log('Sleeping for 60 seconds...')
+    console.log('Sleeping for 60 seconds for server startup...')
     setTimeout(cb, 60000);
   });
 });
 
 gulp.task('test:integration', ['docker:run'], () => {
   return gulp.src('test/integration.test.js')
-    .pipe(mocha());
+    .pipe(mocha({ timeout:60000 }));
 });
 
 gulp.task('test', ['lint', 'mocha']);
