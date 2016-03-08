@@ -5,6 +5,7 @@ import eslint from 'gulp-eslint';
 import { Instrumenter } from 'babel-istanbul';
 import istanbul from 'gulp-istanbul';
 import env from 'gulp-env';
+import { exec } from 'child_process';
 
 gulp.task('build', () => (
   gulp.src('src/**/*.js')
@@ -31,13 +32,27 @@ gulp.task('mocha', (cb) => {
     })) // Covering files
     .pipe(istanbul.hookRequire()) // Force `require` to return covered files
     .on('finish', () => {
-      gulp.src(['test/**/*.js'])
+      gulp.src(['test/**/*.js', '!test/integration.test.js'])
         .pipe(mocha())
         .pipe(istanbul.writeReports())
         .pipe(istanbul.enforceThresholds({ thresholds: { global: 0 } }))
         .pipe(envs.reset)
         .on('end', cb);
     });
+});
+
+gulp.task('docker:run', function(cb) {
+  exec('docker run -d -p 8080:8080 --name eureka netflixoss/eureka:1.1.147', (error, stdout, stderr) => {
+    console.log(stdout);
+    console.log(stderr);
+    console.log('Sleeping for 60 seconds for server startup...')
+    setTimeout(cb, 60000);
+  });
+});
+
+gulp.task('test:integration', ['docker:run'], () => {
+  return gulp.src('test/integration.test.js')
+    .pipe(mocha({ timeout:120000 }));
 });
 
 gulp.task('test', ['lint', 'mocha']);

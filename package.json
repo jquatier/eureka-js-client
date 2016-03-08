@@ -6,6 +6,7 @@
   "scripts": {
     "prepublish": "gulp",
     "test": "gulp test",
+    "integration": "gulp test:integration",
     "coveralls": "cat ./coverage/lcov.info | coveralls && rm -rf ./coverage"
   },
   "repository": {
