@@ -30,7 +30,7 @@ describe('Integration Test', () => {
     };
     client = new Eureka(config);
     client.start(() => {
-      console.log('Sleeping 30 seconds for registry to refresh...')
+      console.log('Sleeping 30 seconds for registry to refresh...');
       setTimeout(done, 30000);
     });
   });
