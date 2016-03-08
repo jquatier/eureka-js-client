@@ -12,7 +12,7 @@ node_js:
   - "stable"
 
 script:
-  - npm run integration
+  - npm run test && npm run integration
 
 after_script:
   - npm run coveralls
