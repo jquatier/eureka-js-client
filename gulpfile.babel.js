@@ -41,19 +41,22 @@ gulp.task('mocha', (cb) => {
     });
 });
 
-gulp.task('docker:run', function(cb) {
-  exec('docker run -d -p 8080:8080 --name eureka netflixoss/eureka:1.1.147', (error, stdout, stderr) => {
+const DOCKER_RUN = 'docker run -d -p 8080:8080 --name eureka netflixoss/eureka:1.1.147';
+gulp.task('docker:run', (cb) => {
+  exec(DOCKER_RUN, (error, stdout, stderr) => {
+    /* eslint-disable no-console */
     console.log(stdout);
     console.log(stderr);
-    console.log('Sleeping for 60 seconds for server startup...')
+    console.log('Sleeping for 60 seconds for server startup...');
+    /* eslint-enable no-console */
     setTimeout(cb, 60000);
   });
 });
 
-gulp.task('test:integration', ['docker:run'], () => {
-  return gulp.src('test/integration.test.js')
-    .pipe(mocha({ timeout:120000 }));
-});
+gulp.task('test:integration', ['docker:run'], () => (
+  gulp.src('test/integration.test.js')
+    .pipe(mocha({ timeout: 120000 }))
+));
 
 gulp.task('test', ['lint', 'mocha']);
 
