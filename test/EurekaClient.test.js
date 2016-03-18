@@ -112,22 +112,38 @@ describe('Eureka client', () => {
     let client;
     let registerSpy;
     let fetchRegistrySpy;
+    let heartbeatsSpy;
+    let registryFetchSpy;
     before(() => {
       config = makeConfig();
       client = new Eureka(config);
-      registerSpy = sinon.stub(client, 'register').callsArg(0);
-      fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
     });
 
     after(() => {
       registerSpy.restore();
       fetchRegistrySpy.restore();
+      heartbeatsSpy.restore();
+      registryFetchSpy.restore();
     });
 
     it('should call register and fetch registry', (done) => {
+      registerSpy = sinon.stub(client, 'register').callsArg(0);
+      fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
+
       client.start(() => {
         expect(registerSpy).to.have.been.calledOnce;
         expect(fetchRegistrySpy).to.have.been.calledOnce;
+        done();
+      });
+    });
+
+    it('should initiate heartbeats / registry fetches', (done) => {
+      heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
+      registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
+
+      client.start(() => {
+        expect(heartbeatsSpy).to.have.been.calledOnce;
+        expect(registryFetchSpy).to.have.been.calledOnce;
         done();
       });
     });
@@ -159,22 +175,16 @@ describe('Eureka client', () => {
   describe('register()', () => {
     let config;
     let client;
-    let heartbeatsSpy;
-    let registryFetchSpy;
     beforeEach(() => {
       config = makeConfig();
       client = new Eureka(config);
-      heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
-      registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
     });
 
     afterEach(() => {
       request.post.restore();
-      heartbeatsSpy.restore();
-      registryFetchSpy.restore();
     });
 
-    it('should call register URI, and initiate heartbeats / registry fetches', () => {
+    it('should call register URI', () => {
       sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
       const registerCb = sinon.spy();
       client.register(registerCb);
@@ -194,8 +204,6 @@ describe('Eureka client', () => {
         url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
       });
 
-      expect(heartbeatsSpy).to.have.been.calledOnce;
-      expect(registryFetchSpy).to.have.been.calledOnce;
       expect(registerCb).to.have.been.calledWithMatch(null);
     });
 
@@ -207,9 +215,6 @@ describe('Eureka client', () => {
       expect(registerCb).to.have.been.calledWithMatch({
         message: 'eureka registration FAILED: status: 500 body: null',
       });
-
-      expect(heartbeatsSpy).to.have.callCount(0);
-      expect(registryFetchSpy).to.have.callCount(0);
     });
 
     it('should throw error for request error', () => {
@@ -218,9 +223,6 @@ describe('Eureka client', () => {
       client.register(registerCb);
 
       expect(registerCb).to.have.been.calledWithMatch({ message: 'request error' });
-
-      expect(heartbeatsSpy).to.have.callCount(0);
-      expect(registryFetchSpy).to.have.callCount(0);
     });
   });
 
@@ -285,6 +287,31 @@ describe('Eureka client', () => {
 
       expect(request.put).to.have.been.calledWithMatch({
         url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+      });
+    });
+
+    it('should re-register on 404', () => {
+      sinon.stub(request, 'put').yields(null, { statusCode: 404 }, null);
+      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
+      client.renew();
+
+      expect(request.put).to.have.been.calledWithMatch({
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+      });
+
+      expect(request.post).to.have.been.calledWithMatch({
+        body: {
+          instance: {
+            app: 'app',
+            hostName: 'myhost',
+            dataCenterInfo: { name: 'MyOwn' },
+            port: 9999,
+            status: 'UP',
+            vipAddress: '1.2.2.3',
+          },
+        },
+        json: true,
+        url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
       });
     });
   });
