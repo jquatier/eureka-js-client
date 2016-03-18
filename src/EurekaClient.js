@@ -224,7 +224,7 @@ export default class Eureka {
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           this.logger.debug('eureka heartbeat success');
-        } else if (response.statusCode === 404) {
+        } else if (!error && response.statusCode === 404) {
           this.logger.warn('eureka heartbeat FAILED, Re-registering app');
           this.register();
         } else {
