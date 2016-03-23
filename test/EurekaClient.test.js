@@ -126,22 +126,15 @@ describe('Eureka client', () => {
       registryFetchSpy.restore();
     });
 
-    it('should call register and fetch registry', (done) => {
+    it('should call register, fetch registry, startHeartbeat and startRegistryFetches', (done) => {
       registerSpy = sinon.stub(client, 'register').callsArg(0);
       fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
-
-      client.start(() => {
-        expect(registerSpy).to.have.been.calledOnce;
-        expect(fetchRegistrySpy).to.have.been.calledOnce;
-        done();
-      });
-    });
-
-    it('should initiate heartbeats / registry fetches', (done) => {
       heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
       registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
 
       client.start(() => {
+        expect(registerSpy).to.have.been.calledOnce;
+        expect(fetchRegistrySpy).to.have.been.calledOnce;
         expect(heartbeatsSpy).to.have.been.calledOnce;
         expect(registryFetchSpy).to.have.been.calledOnce;
         done();
