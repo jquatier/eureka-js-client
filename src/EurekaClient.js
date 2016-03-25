@@ -113,7 +113,9 @@ export default class Eureka {
         this.register(done);
       },
       done => {
+        this.startHeartbeats();
         if (this.config.eureka.fetchRegistry) {
+          this.startRegistryFetches();
           return this.fetchRegistry(done);
         }
         done();
@@ -170,10 +172,6 @@ export default class Eureka {
             'registered with eureka: ',
             `${this.config.instance.app}/${this.instanceId}`
           );
-          this.startHeartbeats();
-          if (this.config.eureka.fetchRegistry) {
-            this.startRegistryFetches();
-          }
           return callback(null);
         } else if (error) {
           return callback(error);
@@ -226,6 +224,9 @@ export default class Eureka {
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           this.logger.debug('eureka heartbeat success');
+        } else if (!error && response.statusCode === 404) {
+          this.logger.warn('eureka heartbeat FAILED, Re-registering app');
+          this.register();
         } else {
           if (error) {
             this.logger.error('An error in the request occured.', error);
