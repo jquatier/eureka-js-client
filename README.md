@@ -138,6 +138,42 @@ You can also turn on debugging within the library by setting the log level to de
 client.logger.level('debug');
 ```
 
+## Known Issues
+
+### 400 Bad Request Errors from Eureka Server
+
+Later versions of Eureka require a slightly different JSON POST body on registration. If you are seeing 400 errors on registration it's probably an issue with your configuration and it could be the formatting differences below. The history behind this is unclear and there's a discussion [here](https://github.com/Netflix-Skunkworks/zerotodocker/issues/46). The main differences are:
+
+- `port` is now an object with 2 required fields `$` and `@enabled`.
+- `dataCenterInfo` has an `@class` property.
+
+See below for an example:
+
+```javascript
+const client = new Eureka({
+  // application instance information
+  instance: {
+    app: 'jqservice',
+    hostName: 'localhost',
+    ipAddr: '127.0.0.1',
+    port: {
+      '$': 8080,
+      '@enabled': true,
+    },
+    vipAddress: 'jq.test.something.com',
+    dataCenterInfo: {
+      '@class': 'com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo',
+      name: 'MyOwn',
+    },
+  },
+  eureka: {
+    // eureka server host / port
+    host: '192.168.99.100',
+    port: 32768,
+  },
+});
+```
+
 ## Tests
 
 The test for the module are written using mocha and chai. To run the unit tests, you can use the gulp `test` task:
