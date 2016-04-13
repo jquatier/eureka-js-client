@@ -5,7 +5,8 @@ import eslint from 'gulp-eslint';
 import { Instrumenter } from 'babel-istanbul';
 import istanbul from 'gulp-istanbul';
 import env from 'gulp-env';
-import { exec } from 'child_process';
+import request from 'request';
+import { spawn, exec } from 'child_process';
 
 gulp.task('build', () => (
   gulp.src('src/**/*.js')
@@ -41,15 +42,48 @@ gulp.task('mocha', (cb) => {
     });
 });
 
-const DOCKER_RUN = 'docker run -d -p 8080:8080 --name eureka netflixoss/eureka:1.1.147';
+const EUREKA_INIT_TIMEOUT = 60000;
+const EUREKA_IMAGE = 'netflixoss/eureka:1.1.147';
+const DOCKER_PORT = '8080';
+const DOCKER_NAME = 'eureka-js-client';
+const DOCKER_RUN_ARGS = [
+  'run', '-d', '-p', `${DOCKER_PORT}:8080`, '--name', DOCKER_NAME, EUREKA_IMAGE,
+];
+const DOCKER_START_ARGS = [
+  'start', DOCKER_NAME,
+];
+
+let startTime;
+function waitForEureka(cb) {
+  if (!startTime) startTime = +new Date();
+  else if ((+new Date() - startTime) > EUREKA_INIT_TIMEOUT) {
+    return cb(new Error('Eureka failed to start before timeout'));
+  }
+  request.get({ url: `http://localhost:${DOCKER_PORT}/eureka` }, (err) => {
+    if (err) {
+      if (err.code === 'ECONNRESET') {
+        console.log('Eureka connection not ready. Waiting..'); // eslint-disable-line
+        setTimeout(() => waitForEureka(cb), 1000);
+      } else {
+        cb(err);
+      }
+    } else {
+      cb();
+    }
+  });
+}
+
 gulp.task('docker:run', (cb) => {
-  exec(DOCKER_RUN, (error, stdout, stderr) => {
-    /* eslint-disable no-console */
-    console.log(stdout);
-    console.log(stderr);
-    console.log('Sleeping for 60 seconds for server startup...');
-    /* eslint-enable no-console */
-    setTimeout(cb, 60000);
+  exec(`docker ps -a | grep '\\b${DOCKER_NAME}\\b' | wc -l`, (error, stdout) => {
+    const DOCKER_ARGS = (stdout.trim() === '1') ? DOCKER_START_ARGS : DOCKER_RUN_ARGS;
+    const child = spawn('docker', DOCKER_ARGS, { stdio: 'inherit' });
+    child.on('close', (code) => {
+      if (code > 0) {
+        cb(new Error('Failed to start docker image'));
+      } else {
+        waitForEureka(cb);
+      }
+    });
   });
 });
 
