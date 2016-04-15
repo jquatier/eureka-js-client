@@ -116,9 +116,20 @@ export default class Eureka {
         this.startHeartbeats();
         if (this.config.eureka.fetchRegistry) {
           this.startRegistryFetches();
-          return this.fetchRegistry(done);
+          if (this.config.eureka.waitForRegistry) {
+            const waitForRegistryUpdate = (cb) => {
+              this.fetchRegistry(() => {
+                const found = this.getInstancesByVipAddress(this.config.instance.vipAddress);
+                if (!found) setTimeout(() => waitForRegistryUpdate(cb), 2000);
+                else cb();
+              });
+            };
+            return waitForRegistryUpdate(done);
+          }
+          this.fetchRegistry(done);
+        } else {
+          done();
         }
-        done();
       },
     ], callback);
   }

@@ -17,6 +17,7 @@ describe('Integration Test', () => {
       heartbeatInterval: 30000,
       registryFetchInterval: 5000,
       fetchRegistry: true,
+      waitForRegistry: true,
       servicePath: '/eureka/v2/apps/',
       ssl: false,
       useDns: false,
@@ -28,12 +29,7 @@ describe('Integration Test', () => {
 
   const client = new Eureka(config);
   before((done) => {
-    client.start(() => {
-      /* eslint-disable no-console */
-      console.log('Sleeping 60 seconds for registry to refresh...');
-      /* eslint-enable no-console */
-      setTimeout(done, 60000);
-    });
+    client.start(done);
   });
 
   it('should be able to get instance by the app id', () => {
