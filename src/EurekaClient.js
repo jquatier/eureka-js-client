@@ -351,10 +351,15 @@ export default class Eureka {
 
   /*
     Fetches the metadata using the built-in client and updates the instance
-    configuration with the public hostname and IP address. A string replacement
-    is done on the healthCheckUrl and statusPageUrl so that users can define
-    the URLs with a placeholder for the host ('__HOST__'). This allows
-    flexibility since the host isn't known until the metadata is fetched.
+    configuration with the hostname and IP address. If the value of the config
+    option 'eureka.useLocalMetadata' is true, then the local IP address and
+    hostname is used. Otherwise, the public IP address and hostname is used.
+
+    A string replacement is done on the healthCheckUrl and statusPageUrl so
+    that users can define the URLs with a placeholder for the host ('__HOST__').
+    This allows flexibility since the host isn't known until the metadata is
+    fetched. The replaced value respects the config option 'eureka.useLocalMetadata'
+    as described above.
 
     This will only get called when dataCenterInfo.name is Amazon, but you can
     set config.eureka.fetchMetadata to false if you want to provide your own
@@ -366,17 +371,19 @@ export default class Eureka {
         this.config.instance.dataCenterInfo.metadata,
         metadataResult
       );
-      this.config.instance.hostName = metadataResult['public-hostname'];
-      this.config.instance.ipAddr = metadataResult['public-ipv4'];
+      const useLocal = this.config.eureka.useLocalMetadata;
+      const metadataHostName = metadataResult[useLocal ? 'local-hostname' : 'public-hostname'];
+      this.config.instance.hostName = metadataHostName;
+      this.config.instance.ipAddr = metadataResult[useLocal ? 'local-ipv4' : 'public-ipv4'];
 
       if (this.config.instance.statusPageUrl) {
         const { statusPageUrl } = this.config.instance;
-        const replacedUrl = statusPageUrl.replace('__HOST__', metadataResult['public-hostname']);
+        const replacedUrl = statusPageUrl.replace('__HOST__', metadataHostName);
         this.config.instance.statusPageUrl = replacedUrl;
       }
       if (this.config.instance.healthCheckUrl) {
         const { healthCheckUrl } = this.config.instance;
-        const replacedUrl = healthCheckUrl.replace('__HOST__', metadataResult['public-hostname']);
+        const replacedUrl = healthCheckUrl.replace('__HOST__', metadataHostName);
         this.config.instance.healthCheckUrl = replacedUrl;
       }
 
