@@ -8,6 +8,7 @@ export default {
     ssl: false,
     useDns: false,
     fetchMetadata: true,
+    useLocalMetadata: false,
   },
   instance: {},
 };

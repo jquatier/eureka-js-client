@@ -580,23 +580,21 @@ describe('Eureka client', () => {
   describe('addInstanceMetadata()', () => {
     let client;
     let config;
+    let instanceConfig;
+    let awsMetadata;
     let metadataSpy;
     beforeEach(() => {
-      config = {
-        instance: {
-          app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: { name: 'Amazon' },
-          statusPageUrl: 'http://__HOST__:8080/',
-          healthCheckUrl: 'http://__HOST__:8077/healthcheck',
-        },
-        eureka: { host: '127.0.0.1', port: 9999 },
+      instanceConfig = {
+        app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: { name: 'Amazon' },
+        statusPageUrl: 'http://__HOST__:8080/',
+        healthCheckUrl: 'http://__HOST__:8077/healthcheck',
       };
-      client = new Eureka(config);
-      metadataSpy = sinon.spy();
-
-      sinon.stub(client.metadataClient, 'fetchMetadata').yields({
+      awsMetadata = {
         'public-hostname': 'ec2-127-0-0-1.us-fake-1.mydomain.com',
         'public-ipv4': '54.54.54.54',
-      });
+        'local-hostname': 'fake-1',
+        'local-ipv4': '10.0.1.1',
+      };
     });
 
     afterEach(() => {
@@ -604,11 +602,41 @@ describe('Eureka client', () => {
     });
 
     it('should update hosts with AWS metadata public host', () => {
+      // Setup
+      config = {
+        instance: instanceConfig,
+        eureka: { host: '127.0.0.1', port: 9999 },
+      };
+      client = new Eureka(config);
+      metadataSpy = sinon.spy();
+
+      sinon.stub(client.metadataClient, 'fetchMetadata').yields(awsMetadata);
+
+      // Act
       client.addInstanceMetadata(metadataSpy);
       expect(client.config.instance.hostName).to.equal('ec2-127-0-0-1.us-fake-1.mydomain.com');
       expect(client.config.instance.ipAddr).to.equal('54.54.54.54');
       expect(client.config.instance.statusPageUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8080/');
       expect(client.config.instance.healthCheckUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8077/healthcheck');
+    });
+
+    it('should update hosts with AWS metadata local host if useLocalMetadata === true', () => {
+      // Setup
+      config = {
+        instance: instanceConfig,
+        eureka: { host: '127.0.0.1', port: 9999, useLocalMetadata: true },
+      };
+      client = new Eureka(config);
+      metadataSpy = sinon.spy();
+
+      sinon.stub(client.metadataClient, 'fetchMetadata').yields(awsMetadata);
+
+      // Act
+      client.addInstanceMetadata(metadataSpy);
+      expect(client.config.instance.hostName).to.equal('fake-1');
+      expect(client.config.instance.ipAddr).to.equal('10.0.1.1');
+      expect(client.config.instance.statusPageUrl).to.equal('http://fake-1:8080/');
+      expect(client.config.instance.healthCheckUrl).to.equal('http://fake-1:8077/healthcheck');
     });
   });
 
