@@ -176,6 +176,7 @@ export default class Eureka {
         url: eurekaUrl + this.config.instance.app,
         json: true,
         body: { instance: this.config.instance },
+        gzip: true,
       }, (error, response, body) => {
         clearTimeout(connectionTimeout);
         if (!error && response.statusCode === 204) {
@@ -201,6 +202,7 @@ export default class Eureka {
     this.buildEurekaUrl(eurekaUrl => {
       request.del({
         url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
+        gzip: true,
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           this.logger.info(
@@ -232,6 +234,7 @@ export default class Eureka {
     this.buildEurekaUrl(eurekaUrl => {
       request.put({
         url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
+        gzip: true,
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           this.logger.debug('eureka heartbeat success');
@@ -299,6 +302,7 @@ export default class Eureka {
         headers: {
           Accept: 'application/json',
         },
+        gzip: true,
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           this.logger.debug('retrieved registry successfully');
