@@ -29,7 +29,8 @@
     "async": "^1.4.2",
     "deepmerge": "^0.2.10",
     "js-yaml": "^3.3.1",
-    "request": "^2.60.0"
+    "request": "^2.60.0",
+    "lodash": "^4.6.0"
   },
   "devDependencies": {
     "babel-core": "^6.4.5",
