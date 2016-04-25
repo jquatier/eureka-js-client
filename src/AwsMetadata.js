@@ -1,7 +1,6 @@
 import request from 'request';
 import async from 'async';
 import Logger from './Logger';
-import _ from 'lodash';
 
 /*
   Utility class for pulling AWS metadata that Eureka requires when
@@ -54,7 +53,8 @@ export default class AwsMetadata {
       this.lookupMetadataKey(`network/interfaces/macs/${results.mac}/vpc-id`, (err, vpcId) => {
         results['vpc-id'] = vpcId;
         this.logger.debug('Found Instance AWS Metadata', results);
-        resultsCallback(_(results).omitBy(_.isUndefined).omitBy(_.isNull).value());
+        Object.keys(results).filter(k => results[k] === null).forEach(k => delete results[k]);
+        resultsCallback(results);
       });
     });
   }
