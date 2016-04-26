@@ -53,7 +53,9 @@ export default class AwsMetadata {
       this.lookupMetadataKey(`network/interfaces/macs/${results.mac}/vpc-id`, (err, vpcId) => {
         results['vpc-id'] = vpcId;
         this.logger.debug('Found Instance AWS Metadata', results);
-        Object.keys(results).filter(k => results[k] === null).forEach(k => delete results[k]);
+        Object.keys(results)
+              .filter(k => results[k] === null || results[k] === undefined)
+              .forEach(k => delete results[k]);
         resultsCallback(results);
       });
     });

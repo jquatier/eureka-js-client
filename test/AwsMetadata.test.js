@@ -84,7 +84,7 @@ describe('AWS Metadata client', () => {
       });
     });
 
-    it('should call metadata URIs and filter out null values', () => {
+    it('should call metadata URIs and filter out null and undefined values', () => {
       const requestStub = sinon.stub(request, 'get');
 
       requestStub.withArgs({
@@ -111,9 +111,10 @@ describe('AWS Metadata client', () => {
         url: 'http://127.0.0.1:8888/latest/meta-data/placement/availability-zone',
       }).yields(null, { statusCode: 200 }, 'fake-1');
 
+      let undef;
       requestStub.withArgs({
         url: 'http://127.0.0.1:8888/latest/meta-data/public-hostname',
-      }).yields(null, { statusCode: 200 }, null);
+      }).yields(null, { statusCode: 200 }, undef);
 
       requestStub.withArgs({
         url: 'http://127.0.0.1:8888/latest/meta-data/public-ipv4',
@@ -135,7 +136,6 @@ describe('AWS Metadata client', () => {
       client.fetchMetadata(fetchCb);
 
       expect(request.get).to.have.been.callCount(11);
-
       expect(fetchCb).to.have.been.calledWithMatch({
         accountId: '123456',
         'ami-id': 'ami-123',
@@ -147,6 +147,15 @@ describe('AWS Metadata client', () => {
         mac: 'AB:CD:EF:GH:IJ',
         'vpc-id': 'vpc123',
       });
+      expect(fetchCb.firstCall.args[0]).to.have.all.keys(['ami-id',
+        'instance-id',
+        'instance-type',
+        'local-ipv4',
+        'local-hostname',
+        'availability-zone',
+        'mac',
+        'accountId',
+        'vpc-id']);
     });
   });
 });
