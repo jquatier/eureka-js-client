@@ -639,6 +639,25 @@ describe('Eureka client', () => {
       expect(client.config.instance.healthCheckUrl).to.equal('http://fake-1:8077/healthcheck');
     });
   });
+  describe('buildEurekaUrl()', () => {
+    let config;
+    let client;
+
+    afterEach(() => {
+      dns.resolveTxt.restore();
+    });
+
+    it('should pass error when lookupCurrentEurekaHost passes error', () => {
+      config = makeConfig();
+      client = new Eureka(config);
+
+      sinon.stub(dns, 'resolveTxt').yields(null, []);
+      sinon.stub(client, 'lookupCurrentEurekaHost').yields(new Error());
+      const spy = sinon.spy();
+      client.buildEurekaUrl(spy);
+      expect(spy.args[0][0]).to.be.instanceof(Error);
+    });
+  });
 
   describe('locateEurekaHostUsingDns()', () => {
     let config;
@@ -653,15 +672,14 @@ describe('Eureka client', () => {
       dns.resolveTxt.restore();
     });
 
-    it('should throw error when ec2Region is undefined', () => {
+    it('should pass error when ec2Region is undefined', () => {
       config = makeConfig();
       client = new Eureka(config);
 
       sinon.stub(dns, 'resolveTxt').yields(null, []);
-      function noRegion() {
-        client.locateEurekaHostUsingDns();
-      }
-      expect(noRegion).to.throw(Error);
+      const spy = sinon.spy();
+      client.locateEurekaHostUsingDns(spy);
+      expect(spy.args[0][0]).to.be.instanceof(Error);
     });
 
     it('should lookup server list using DNS', () => {
@@ -680,7 +698,7 @@ describe('Eureka client', () => {
       expect(dns.resolveTxt).to.have.been.calledWith(
         sinon.match(value => eurekaHosts.indexOf(value))
       );
-      expect(locateCb).to.have.been.calledWithMatch('1.2.3.4');
+      expect(locateCb).to.have.been.calledWithMatch(null, '1.2.3.4');
     });
   });
 });

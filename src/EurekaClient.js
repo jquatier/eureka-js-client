@@ -91,10 +91,11 @@ export default class Eureka {
     Build the base Eureka server URL + path
   */
   buildEurekaUrl(callback = noop) {
-    this.lookupCurrentEurekaHost(eurekaHost => {
+    this.lookupCurrentEurekaHost((err, eurekaHost) => {
+      if (err) return callback(err);
       const { port, servicePath, ssl } = this.config.eureka;
       const host = ssl ? 'https' : 'http';
-      callback(`${host}://${eurekaHost}:${port}${servicePath}`);
+      callback(null, `${host}://${eurekaHost}:${port}${servicePath}`);
     });
   }
 
@@ -171,7 +172,8 @@ export default class Eureka {
       'Eureka. This usually means there is an issue connecting to the host ' +
       'specified. Start application with NODE_DEBUG=request for more logging.');
     }, 10000);
-    this.buildEurekaUrl(eurekaUrl => {
+    this.buildEurekaUrl((err, eurekaUrl) => {
+      if (err) return callback(err);
       request.post({
         url: eurekaUrl + this.config.instance.app,
         json: true,
@@ -199,7 +201,8 @@ export default class Eureka {
     De-registers with the Eureka server and stops heartbeats.
   */
   deregister(callback = noop) {
-    this.buildEurekaUrl(eurekaUrl => {
+    this.buildEurekaUrl((err, eurekaUrl) => {
+      if (err) return callback(err);
       request.del({
         url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
         gzip: true,
@@ -231,7 +234,11 @@ export default class Eureka {
   }
 
   renew() {
-    this.buildEurekaUrl(eurekaUrl => {
+    this.buildEurekaUrl((err, eurekaUrl) => {
+      if (err) {
+        this.logger.warn('eureka heartbeat FAILED', err);
+        return;
+      }
       request.put({
         url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
         gzip: true,
@@ -260,7 +267,9 @@ export default class Eureka {
   */
   startRegistryFetches() {
     this.registryFetch = setInterval(() => {
-      this.fetchRegistry();
+      this.fetchRegistry(err => {
+        this.logger.warn('Error fetching registries', err);
+      });
     }, this.config.eureka.registryFetchInterval);
   }
 
@@ -296,7 +305,8 @@ export default class Eureka {
     Retrieves all applications registered with the Eureka server
    */
   fetchRegistry(callback = noop) {
-    this.buildEurekaUrl(eurekaUrl => {
+    this.buildEurekaUrl((err, eurekaUrl) => {
+      if (err) return callback(err);
       request.get({
         url: eurekaUrl,
         headers: {
@@ -401,9 +411,9 @@ export default class Eureka {
   */
   lookupCurrentEurekaHost(callback = noop) {
     if (this.amazonDataCenter && this.config.eureka.useDns) {
-      this.locateEurekaHostUsingDns(resolvedHost => callback(resolvedHost));
+      this.locateEurekaHostUsingDns((err, resolvedHost) => callback(err, resolvedHost));
     } else {
-      return callback(this.config.eureka.host);
+      return callback(null, this.config.eureka.host);
     }
   }
 
@@ -417,24 +427,24 @@ export default class Eureka {
   locateEurekaHostUsingDns(callback = noop) {
     const { ec2Region, host } = this.config.eureka;
     if (!ec2Region) {
-      throw new Error(
+      return callback(new Error(
         'EC2 region was undefined. ' +
         'config.eureka.ec2Region must be set to resolve Eureka using DNS records.'
-      );
+      ));
     }
     dns.resolveTxt(`txt.${ec2Region}.${host}`, (err, addresses) => {
       if (err) {
-        throw new Error(
+        callback(new Error(
           `Error resolving eureka server list for region [${ec2Region}] using DNS: [${err}]`
-        );
+        ));
       }
       const random = Math.floor(Math.random() * addresses[0].length);
       dns.resolveTxt(`txt.${addresses[0][random]}`, (resolveErr, results) => {
         if (resolveErr) {
-          throw new Error(`Error locating eureka server using DNS: [${resolveErr}]`);
+          callback(new Error(`Error locating eureka server using DNS: [${resolveErr}]`));
         }
         this.logger.debug('Found Eureka Server @ ', results);
-        callback([].concat(...results).shift());
+        callback(null, [].concat(...results).shift());
       });
     });
   }
