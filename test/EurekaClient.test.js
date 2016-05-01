@@ -142,6 +142,58 @@ describe('Eureka client', () => {
     });
   });
 
+  describe('startHeartbeats()', () => {
+    let config;
+    let client;
+    let renewSpy;
+    let clock;
+    before(() => {
+      config = makeConfig();
+      client = new Eureka(config);
+      renewSpy = sinon.stub(client, 'renew');
+      clock = sinon.useFakeTimers();
+    });
+
+    after(() => {
+      renewSpy.restore();
+      clock.restore();
+    });
+
+    it('should call renew on interval', () => {
+      client.startHeartbeats();
+      clock.tick(30000);
+      expect(renewSpy).to.have.been.calledOnce;
+      clock.tick(30000);
+      expect(renewSpy).to.have.been.calledTwice;
+    });
+  });
+
+  describe('startRegistryFetches()', () => {
+    let config;
+    let client;
+    let fetchRegistrySpy;
+    let clock;
+    before(() => {
+      config = makeConfig();
+      client = new Eureka(config);
+      fetchRegistrySpy = sinon.stub(client, 'fetchRegistry');
+      clock = sinon.useFakeTimers();
+    });
+
+    after(() => {
+      fetchRegistrySpy.restore();
+      clock.restore();
+    });
+
+    it('should call renew on interval', () => {
+      client.startRegistryFetches();
+      clock.tick(30000);
+      expect(fetchRegistrySpy).to.have.been.calledOnce;
+      clock.tick(30000);
+      expect(fetchRegistrySpy).to.have.been.calledTwice;
+    });
+  });
+
   describe('stop()', () => {
     let config;
     let client;
