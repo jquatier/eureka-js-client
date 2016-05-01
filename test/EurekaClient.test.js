@@ -512,9 +512,9 @@ describe('Eureka client', () => {
       registry = {
         applications: { application: {} },
       };
-      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: 'vip1' };
-      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2' };
-      instance3 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2' };
+      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: 'vip1', status: 'UP' };
+      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2', status: 'UP' };
+      instance3 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2', status: 'UP' };
       app1 = { name: 'theapp', instance: instance1 };
       app2 = { name: 'theapptwo', instance: [instance2, instance3] };
       client = new Eureka(config);
@@ -548,6 +548,7 @@ describe('Eureka client', () => {
     let app;
     let instance1;
     let instance2;
+    let downInstance;
     let theVip;
     let cache;
     beforeEach(() => {
@@ -556,8 +557,9 @@ describe('Eureka client', () => {
       });
       client = new Eureka(config);
       theVip = 'theVip';
-      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: theVip };
-      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: theVip };
+      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: theVip, status: 'UP' };
+      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: theVip, status: 'UP' };
+      downInstance = { host: '127.0.0.2', port: 2000, vipAddress: theVip, status: 'DOWN' };
       app = { name: 'theapp' };
       cache = { app: {}, vip: {} };
     });
@@ -574,6 +576,25 @@ describe('Eureka client', () => {
       client.transformApp(app, cache);
       expect(cache.app[app.name.toUpperCase()].length).to.equal(2);
       expect(cache.vip[theVip].length).to.equal(2);
+    });
+
+    it('should filter UP instances by default', () => {
+      app.instance = [instance1, instance2, downInstance];
+      client.transformApp(app, cache);
+      expect(cache.app[app.name.toUpperCase()].length).to.equal(2);
+      expect(cache.vip[theVip].length).to.equal(2);
+    });
+
+    it('should not filter UP instances when filterUpInstances === false', () => {
+      config = makeConfig({
+        instance: { dataCenterInfo: { name: 'Amazon' } },
+        eureka: { filterUpInstances: false },
+      });
+      client = new Eureka(config);
+      app.instance = [instance1, instance2, downInstance];
+      client.transformApp(app, cache);
+      expect(cache.app[app.name.toUpperCase()].length).to.equal(3);
+      expect(cache.vip[theVip].length).to.equal(3);
     });
   });
 
