@@ -3,6 +3,7 @@ import sinon from 'sinon';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 import request from 'request';
+import { EventEmitter } from 'events';
 import dns from 'dns';
 import { join } from 'path';
 import merge from 'deepmerge';
@@ -29,6 +30,10 @@ function makeConfig(overrides = {}) {
 
 describe('Eureka client', () => {
   describe('Eureka()', () => {
+    it('should extend EventEmitter', () => {
+      expect(new Eureka(makeConfig())).to.be.instanceof(EventEmitter);
+    });
+
     it('should throw an error if no config is found', () => {
       function fn() {
         return new Eureka();
@@ -131,12 +136,16 @@ describe('Eureka client', () => {
       fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
       heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
       registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
+      const eventSpy = sinon.spy();
+      client.on('started', eventSpy);
 
       client.start(() => {
         expect(registerSpy).to.have.been.calledOnce;
         expect(fetchRegistrySpy).to.have.been.calledOnce;
         expect(heartbeatsSpy).to.have.been.calledOnce;
         expect(registryFetchSpy).to.have.been.calledOnce;
+        expect(registryFetchSpy).to.have.been.calledOnce;
+        expect(eventSpy).to.have.been.calledOnce;
         done();
       });
     });
@@ -228,6 +237,13 @@ describe('Eureka client', () => {
     afterEach(() => {
       request.post.restore();
     });
+    it('should trigger register event', () => {
+      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
+      const eventSpy = sinon.spy();
+      client.on('registered', eventSpy);
+      client.register();
+      expect(eventSpy).to.have.been.calledOnce;
+    });
 
     it('should call register URI', () => {
       sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
@@ -283,6 +299,14 @@ describe('Eureka client', () => {
       request.del.restore();
     });
 
+    it('should should trigger deregister event', () => {
+      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      const eventSpy = sinon.spy();
+      client.on('deregistered', eventSpy);
+      client.register();
+      client.deregister();
+    });
+
     it('should call deregister URI', () => {
       sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
       const deregisterCb = sinon.spy();
@@ -333,6 +357,15 @@ describe('Eureka client', () => {
       expect(request.put).to.have.been.calledWithMatch({
         url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
       });
+    });
+
+    it('should trigger a heartbeat event', () => {
+      sinon.stub(request, 'put').yields(null, { statusCode: 200 }, null);
+      const eventSpy = sinon.spy();
+      client.on('heartbeat', eventSpy);
+      client.renew();
+
+      expect(eventSpy).to.have.been.calledOnce;
     });
 
     it('should re-register on 404', () => {
@@ -516,6 +549,14 @@ describe('Eureka client', () => {
     afterEach(() => {
       request.get.restore();
       client.transformRegistry.restore();
+    });
+
+    it('should should trigger registryUpdated event', () => {
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      const eventSpy = sinon.spy();
+      client.on('registryUpdated', eventSpy);
+      client.fetchRegistry();
+      expect(eventSpy).to.have.been.calledOnce;
     });
 
     it('should call registry URI', () => {

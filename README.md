@@ -137,6 +137,18 @@ option | default value | description
 `eureka.fetchMetadata` | `true` | fetch AWS metadata when in AWS environment, see [Configuring for AWS environments](#configuring-for-aws-environments)
 `eureka.useLocalMetadata` | `false` | use local IP and local hostname from metadata when in an AWS environment.
 
+## Events
+
+Eureka client is an instance of `EventEmitter` and provides the following events for consumption:
+
+event | data provided | description
+---- | --- | ---
+`started` | N/A | Fired when eureka client is fully registered and all registries have been updated.
+`registered` | N/A | Fired when the eureka client is registered with eureka.
+`deregistered` | N/A | Fired when the eureka client is deregistered with eureka.
+`heartbeat` | N/A | Fired when the eureka client has successfully renewed it's lease with eureka.
+`registryUpdated` | N/A | Fired when the eureka client has successfully update it's registries.
+
 ## Debugging
 
 The library uses [request](https://github.com/request/request) for all service calls, and debugging can be turned on by passing `NODE_DEBUG=request` when you start node. This allows you you double-check the URL being called as well as other request properties.

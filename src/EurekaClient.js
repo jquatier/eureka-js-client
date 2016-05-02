@@ -5,6 +5,7 @@ import merge from 'deepmerge';
 import path from 'path';
 import dns from 'dns';
 import { series } from 'async';
+import { EventEmitter } from 'events';
 
 import AwsMetadata from './AwsMetadata';
 import Logger from './Logger';
@@ -28,9 +29,10 @@ function getYaml(file) {
   return yml;
 }
 
-export default class Eureka {
+export default class Eureka extends EventEmitter {
 
   constructor(config = {}) {
+    super();
     // Allow passing in a custom logger:
     this.logger = config.logger || new Logger();
 
@@ -134,6 +136,7 @@ export default class Eureka {
       },
     ], (err, ...rest) => {
       if (err) this.logger.warn('Error starting the Eureka Client', err);
+      this.emit('started');
       callback(err, ...rest);
     });
   }
@@ -189,6 +192,7 @@ export default class Eureka {
             'registered with eureka: ',
             `${this.config.instance.app}/${this.instanceId}`
           );
+          this.emit('registered');
           return callback(null);
         } else if (error) {
           this.logger.warn('Error registering with eureka client.', error);
@@ -216,6 +220,7 @@ export default class Eureka {
             'de-registered with eureka: ',
             `${this.config.instance.app}/${this.instanceId}`
           );
+          this.emit('deregistered');
           return callback(null);
         } else if (error) {
           this.logger.warn('Error deregistering with eureka', error);
@@ -250,6 +255,7 @@ export default class Eureka {
       }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
           this.logger.debug('eureka heartbeat success');
+          this.emit('heartbeat');
         } else if (!error && response.statusCode === 404) {
           this.logger.warn('eureka heartbeat FAILED, Re-registering app');
           this.register();
@@ -322,6 +328,7 @@ export default class Eureka {
         if (!error && response.statusCode === 200) {
           this.logger.debug('retrieved registry successfully');
           this.transformRegistry(JSON.parse(body));
+          this.emit('registryUpdated');
           return callback(null);
         } else if (error) {
           this.logger.warn('Error fetching registry', error);
