@@ -132,7 +132,10 @@ export default class Eureka {
           done();
         }
       },
-    ], callback);
+    ], (err, ...rest) => {
+      if (err) this.logger.warn('Error starting the Eureka Client', err);
+      callback(err, ...rest);
+    });
   }
 
   /*
@@ -188,6 +191,7 @@ export default class Eureka {
           );
           return callback(null);
         } else if (error) {
+          this.logger.warn('Error registering with eureka client.', error);
           return callback(error);
         }
         return callback(
@@ -214,6 +218,7 @@ export default class Eureka {
           );
           return callback(null);
         } else if (error) {
+          this.logger.warn('Error deregistering with eureka', error);
           return callback(error);
         }
         return callback(
@@ -236,7 +241,7 @@ export default class Eureka {
   renew() {
     this.buildEurekaUrl((err, eurekaUrl) => {
       if (err) {
-        this.logger.warn('eureka heartbeat FAILED', err);
+        this.logger.warn('eureka heartbeat FAILED, will retry', err);
         return;
       }
       request.put({
@@ -268,7 +273,7 @@ export default class Eureka {
   startRegistryFetches() {
     this.registryFetch = setInterval(() => {
       this.fetchRegistry(err => {
-        this.logger.warn('Error fetching registries', err);
+        if (err) this.logger.warn('Error fetching registries', err);
       });
     }, this.config.eureka.registryFetchInterval);
   }
@@ -319,6 +324,7 @@ export default class Eureka {
           this.transformRegistry(JSON.parse(body));
           return callback(null);
         } else if (error) {
+          this.logger.warn('Error fetching registry', error);
           return callback(error);
         }
         callback(new Error('Unable to retrieve registry from Eureka server'));
@@ -441,6 +447,7 @@ export default class Eureka {
       const random = Math.floor(Math.random() * addresses[0].length);
       dns.resolveTxt(`txt.${addresses[0][random]}`, (resolveErr, results) => {
         if (resolveErr) {
+          this.logger.warn('Failed to locate DNS record for Eureka', resolveErr);
           callback(new Error(`Error locating eureka server using DNS: [${resolveErr}]`));
         }
         this.logger.debug('Found Eureka Server @ ', results);
