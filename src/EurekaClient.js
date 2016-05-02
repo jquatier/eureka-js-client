@@ -356,17 +356,25 @@ export default class Eureka {
 
   /*
     Transforms the given application and places in client cache. If an application
-      has a single instance, the instance is placed into the cache as an array of one
+    has a single instance, the instance is placed into the cache as an array of one
    */
   transformApp(app, cache) {
     if (app.instance.length) {
-      cache.app[app.name.toUpperCase()] = app.instance;
-      cache.vip[app.instance[0].vipAddress] = app.instance;
-    } else {
+      const instances = app.instance.filter((instance) => (this.validateInstance(instance)));
+      cache.app[app.name.toUpperCase()] = instances;
+      cache.vip[app.instance[0].vipAddress] = instances;
+    } else if (this.validateInstance(app.instance)) {
       const instances = [app.instance];
       cache.vip[app.instance.vipAddress] = instances;
       cache.app[app.name.toUpperCase()] = instances;
     }
+  }
+
+  /*
+    Returns true if instance filtering is disabled, or if the instance is UP
+  */
+  validateInstance(instance) {
+    return (!this.config.eureka.filterUpInstances || instance.status === 'UP');
   }
 
   /*

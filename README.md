@@ -123,6 +123,19 @@ If your have multiple availability zones and your DNS entries set up according t
 
 This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above.
 
+## Configuration Options
+option | default value | description
+---- | --- | ---
+`logger` | console logging | logger implementation for the client to use
+`eureka.heartbeatInterval` | `30000` | milliseconds to wait between heartbeats
+`eureka.registryFetchInterval` | `30000` | milliseconds to wait between registry fetches
+`eureka.fetchRegistry` | `true` | enable/disable registry fetching
+`eureka.filterUpInstances` | `true` | enable/disable filtering of instances with status === `UP`
+`eureka.servicePath` | `/eureka/v2/apps/` | path to eureka REST service
+`eureka.ssl` | `false` | enable SSL communication with Eureka server
+`eureka.useDns` | `false` | look up Eureka server using DNS, see [Looking up Eureka Servers in AWS using DNS](#looking-up-eureka-servers-in-aws-using-dns)
+`eureka.fetchMetadata` | `true` | fetch AWS metadata when in AWS environment, see [Configuring for AWS environments](#configuring-for-aws-environments)
+`eureka.useLocalMetadata` | `false` | use local IP and local hostname from metadata when in an AWS environment.
 
 ## Debugging
 
