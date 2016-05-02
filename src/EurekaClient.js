@@ -120,14 +120,9 @@ export default class Eureka extends EventEmitter {
         if (this.config.eureka.fetchRegistry) {
           this.startRegistryFetches();
           if (this.config.eureka.waitForRegistry) {
-            const waitForRegistryUpdate = (cb) => {
-              this.fetchRegistry(() => {
-                const found = this.getInstancesByVipAddress(this.config.instance.vipAddress);
-                if (!found) setTimeout(() => waitForRegistryUpdate(cb), 2000);
-                else cb();
-              });
-            };
-            return waitForRegistryUpdate(done);
+            this.on('registryUpdated', () => {
+              done();
+            });
           }
           this.fetchRegistry(done);
         } else {
