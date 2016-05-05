@@ -422,6 +422,25 @@ describe('Eureka client', () => {
       }));
       expect(client.config.eureka.fromFixture).to.equal(true);
     });
+
+    it('should throw error on malformed config file', () => {
+      function malformed() {
+        return new Eureka(makeConfig({
+          cwd: join(__dirname, 'fixtures'),
+          filename: 'malformed-config',
+        }));
+      }
+      expect(malformed).to.throw(Error);
+    });
+    it('should not throw error on malformed config file', () => {
+      function missingFile() {
+        return new Eureka(makeConfig({
+          cwd: join(__dirname, 'fixtures'),
+          filename: 'missing-config',
+        }));
+      }
+      expect(missingFile).to.not.throw();
+    });
   });
 
   describe('validateConfig()', () => {
@@ -699,7 +718,10 @@ describe('Eureka client', () => {
     let metadataSpy;
     beforeEach(() => {
       instanceConfig = {
-        app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: { name: 'Amazon' },
+        app: 'app',
+        vipAddress: '1.2.3.4',
+        port: 9999,
+        dataCenterInfo: { name: 'Amazon' },
         statusPageUrl: 'http://__HOST__:8080/',
         healthCheckUrl: 'http://__HOST__:8077/healthcheck',
       };

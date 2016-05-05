@@ -19,12 +19,24 @@ function noop() {}
   for reporting instance health.
 */
 
+function fileExists(file) {
+  try {
+    return fs.statSync(file);
+  } catch (e) {
+    return false;
+  }
+}
+
 function getYaml(file) {
   let yml = {};
+  if (!fileExists(file)) {
+    return yml; // no configuration file
+  }
   try {
     yml = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
   } catch (e) {
-    // Ignore YAML load error.
+    // configuration file exists but was malformed
+    throw new Error(`Error loading YAML configuration file: ${file} ${e}`);
   }
   return yml;
 }
@@ -175,8 +187,8 @@ export default class Eureka extends EventEmitter {
     this.config.instance.status = 'UP';
     const connectionTimeout = setTimeout(() => {
       this.logger.warn('It looks like it\'s taking a while to register with ' +
-      'Eureka. This usually means there is an issue connecting to the host ' +
-      'specified. Start application with NODE_DEBUG=request for more logging.');
+        'Eureka. This usually means there is an issue connecting to the host ' +
+        'specified. Start application with NODE_DEBUG=request for more logging.');
     }, 10000);
     this.buildEurekaUrl((err, eurekaUrl) => {
       if (err) return callback(err);

@@ -1,0 +1,3 @@
+eureka:
+  fromFixture: true
+  @something: false
