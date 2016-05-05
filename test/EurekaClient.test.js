@@ -836,5 +836,52 @@ describe('Eureka client', () => {
       );
       expect(locateCb).to.have.been.calledWithMatch(null, '1.2.3.4');
     });
+
+    it('should return error when initial DNS lookup fails', () => {
+      config = makeConfig({
+        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
+      });
+      client = new Eureka(config);
+
+      const locateCb = sinon.spy();
+      const resolveStub = sinon.stub(dns, 'resolveTxt');
+      resolveStub.onCall(0).yields(new Error('dns error'), null);
+
+      function shouldNotThrow() {
+        client.locateEurekaHostUsingDns(locateCb);
+      }
+
+      expect(shouldNotThrow).to.not.throw();
+      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
+      expect(locateCb).to.have.been.calledWithMatch({
+        message: 'Error resolving eureka server ' +
+          'list for region [my-region] using DNS: [Error: dns error]',
+      });
+    });
+
+    it('should return error when DNS lookup fails for an individual Eureka server', () => {
+      config = makeConfig({
+        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
+      });
+      client = new Eureka(config);
+
+      const locateCb = sinon.spy();
+      const resolveStub = sinon.stub(dns, 'resolveTxt');
+      resolveStub.onCall(0).yields(null, [eurekaHosts]);
+      resolveStub.onCall(1).yields(new Error('dns error'), null);
+
+      function shouldNotThrow() {
+        client.locateEurekaHostUsingDns(locateCb);
+      }
+
+      expect(shouldNotThrow).to.not.throw();
+      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
+      expect(dns.resolveTxt).to.have.been.calledWith(
+        sinon.match(value => eurekaHosts.indexOf(value))
+      );
+      expect(locateCb).to.have.been.calledWithMatch({
+        message: 'Error locating eureka server using DNS: [Error: dns error]',
+      });
+    });
   });
 });

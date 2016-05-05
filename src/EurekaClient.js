@@ -467,7 +467,7 @@ export default class Eureka extends EventEmitter {
     }
     dns.resolveTxt(`txt.${ec2Region}.${host}`, (err, addresses) => {
       if (err) {
-        callback(new Error(
+        return callback(new Error(
           `Error resolving eureka server list for region [${ec2Region}] using DNS: [${err}]`
         ));
       }
