@@ -1,6 +1,6 @@
 {
   "name": "eureka-js-client",
-  "version": "2.5.2",
+  "version": "3.0.0",
   "description": "A JavaScript implementation the Netflix OSS service registry, Eureka.",
   "main": "lib/index.js",
   "scripts": {
