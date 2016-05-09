@@ -3,6 +3,7 @@ import sinon from 'sinon';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 import request from 'request';
+import { EventEmitter } from 'events';
 import dns from 'dns';
 import { join } from 'path';
 import merge from 'deepmerge';
@@ -29,6 +30,10 @@ function makeConfig(overrides = {}) {
 
 describe('Eureka client', () => {
   describe('Eureka()', () => {
+    it('should extend EventEmitter', () => {
+      expect(new Eureka(makeConfig())).to.be.instanceof(EventEmitter);
+    });
+
     it('should throw an error if no config is found', () => {
       function fn() {
         return new Eureka();
@@ -131,14 +136,70 @@ describe('Eureka client', () => {
       fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
       heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
       registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
+      const eventSpy = sinon.spy();
+      client.on('started', eventSpy);
 
       client.start(() => {
         expect(registerSpy).to.have.been.calledOnce;
         expect(fetchRegistrySpy).to.have.been.calledOnce;
         expect(heartbeatsSpy).to.have.been.calledOnce;
         expect(registryFetchSpy).to.have.been.calledOnce;
+        expect(registryFetchSpy).to.have.been.calledOnce;
+        expect(eventSpy).to.have.been.calledOnce;
         done();
       });
+    });
+  });
+
+  describe('startHeartbeats()', () => {
+    let config;
+    let client;
+    let renewSpy;
+    let clock;
+    before(() => {
+      config = makeConfig();
+      client = new Eureka(config);
+      renewSpy = sinon.stub(client, 'renew');
+      clock = sinon.useFakeTimers();
+    });
+
+    after(() => {
+      renewSpy.restore();
+      clock.restore();
+    });
+
+    it('should call renew on interval', () => {
+      client.startHeartbeats();
+      clock.tick(30000);
+      expect(renewSpy).to.have.been.calledOnce;
+      clock.tick(30000);
+      expect(renewSpy).to.have.been.calledTwice;
+    });
+  });
+
+  describe('startRegistryFetches()', () => {
+    let config;
+    let client;
+    let fetchRegistrySpy;
+    let clock;
+    before(() => {
+      config = makeConfig();
+      client = new Eureka(config);
+      fetchRegistrySpy = sinon.stub(client, 'fetchRegistry');
+      clock = sinon.useFakeTimers();
+    });
+
+    after(() => {
+      fetchRegistrySpy.restore();
+      clock.restore();
+    });
+
+    it('should call renew on interval', () => {
+      client.startRegistryFetches();
+      clock.tick(30000);
+      expect(fetchRegistrySpy).to.have.been.calledOnce;
+      clock.tick(30000);
+      expect(fetchRegistrySpy).to.have.been.calledTwice;
     });
   });
 
@@ -175,6 +236,13 @@ describe('Eureka client', () => {
 
     afterEach(() => {
       request.post.restore();
+    });
+    it('should trigger register event', () => {
+      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
+      const eventSpy = sinon.spy();
+      client.on('registered', eventSpy);
+      client.register();
+      expect(eventSpy).to.have.been.calledOnce;
     });
 
     it('should call register URI', () => {
@@ -231,6 +299,14 @@ describe('Eureka client', () => {
       request.del.restore();
     });
 
+    it('should should trigger deregister event', () => {
+      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      const eventSpy = sinon.spy();
+      client.on('deregistered', eventSpy);
+      client.register();
+      client.deregister();
+    });
+
     it('should call deregister URI', () => {
       sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
       const deregisterCb = sinon.spy();
@@ -281,6 +357,15 @@ describe('Eureka client', () => {
       expect(request.put).to.have.been.calledWithMatch({
         url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
       });
+    });
+
+    it('should trigger a heartbeat event', () => {
+      sinon.stub(request, 'put').yields(null, { statusCode: 200 }, null);
+      const eventSpy = sinon.spy();
+      client.on('heartbeat', eventSpy);
+      client.renew();
+
+      expect(eventSpy).to.have.been.calledOnce;
     });
 
     it('should re-register on 404', () => {
@@ -336,6 +421,25 @@ describe('Eureka client', () => {
         filename: 'config',
       }));
       expect(client.config.eureka.fromFixture).to.equal(true);
+    });
+
+    it('should throw error on malformed config file', () => {
+      function malformed() {
+        return new Eureka(makeConfig({
+          cwd: join(__dirname, 'fixtures'),
+          filename: 'malformed-config',
+        }));
+      }
+      expect(malformed).to.throw(Error);
+    });
+    it('should not throw error on malformed config file', () => {
+      function missingFile() {
+        return new Eureka(makeConfig({
+          cwd: join(__dirname, 'fixtures'),
+          filename: 'missing-config',
+        }));
+      }
+      expect(missingFile).to.not.throw();
     });
   });
 
@@ -466,6 +570,14 @@ describe('Eureka client', () => {
       client.transformRegistry.restore();
     });
 
+    it('should should trigger registryUpdated event', () => {
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      const eventSpy = sinon.spy();
+      client.on('registryUpdated', eventSpy);
+      client.fetchRegistry();
+      expect(eventSpy).to.have.been.calledOnce;
+    });
+
     it('should call registry URI', () => {
       sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
       const registryCb = sinon.spy();
@@ -512,9 +624,9 @@ describe('Eureka client', () => {
       registry = {
         applications: { application: {} },
       };
-      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: 'vip1' };
-      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2' };
-      instance3 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2' };
+      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: 'vip1', status: 'UP' };
+      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2', status: 'UP' };
+      instance3 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2', status: 'UP' };
       app1 = { name: 'theapp', instance: instance1 };
       app2 = { name: 'theapptwo', instance: [instance2, instance3] };
       client = new Eureka(config);
@@ -548,6 +660,7 @@ describe('Eureka client', () => {
     let app;
     let instance1;
     let instance2;
+    let downInstance;
     let theVip;
     let cache;
     beforeEach(() => {
@@ -556,8 +669,9 @@ describe('Eureka client', () => {
       });
       client = new Eureka(config);
       theVip = 'theVip';
-      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: theVip };
-      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: theVip };
+      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: theVip, status: 'UP' };
+      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: theVip, status: 'UP' };
+      downInstance = { host: '127.0.0.2', port: 2000, vipAddress: theVip, status: 'DOWN' };
       app = { name: 'theapp' };
       cache = { app: {}, vip: {} };
     });
@@ -575,6 +689,25 @@ describe('Eureka client', () => {
       expect(cache.app[app.name.toUpperCase()].length).to.equal(2);
       expect(cache.vip[theVip].length).to.equal(2);
     });
+
+    it('should filter UP instances by default', () => {
+      app.instance = [instance1, instance2, downInstance];
+      client.transformApp(app, cache);
+      expect(cache.app[app.name.toUpperCase()].length).to.equal(2);
+      expect(cache.vip[theVip].length).to.equal(2);
+    });
+
+    it('should not filter UP instances when filterUpInstances === false', () => {
+      config = makeConfig({
+        instance: { dataCenterInfo: { name: 'Amazon' } },
+        eureka: { filterUpInstances: false },
+      });
+      client = new Eureka(config);
+      app.instance = [instance1, instance2, downInstance];
+      client.transformApp(app, cache);
+      expect(cache.app[app.name.toUpperCase()].length).to.equal(3);
+      expect(cache.vip[theVip].length).to.equal(3);
+    });
   });
 
   describe('addInstanceMetadata()', () => {
@@ -585,7 +718,10 @@ describe('Eureka client', () => {
     let metadataSpy;
     beforeEach(() => {
       instanceConfig = {
-        app: 'app', vipAddress: '1.2.3.4', port: 9999, dataCenterInfo: { name: 'Amazon' },
+        app: 'app',
+        vipAddress: '1.2.3.4',
+        port: 9999,
+        dataCenterInfo: { name: 'Amazon' },
         statusPageUrl: 'http://__HOST__:8080/',
         healthCheckUrl: 'http://__HOST__:8077/healthcheck',
       };
@@ -639,6 +775,25 @@ describe('Eureka client', () => {
       expect(client.config.instance.healthCheckUrl).to.equal('http://fake-1:8077/healthcheck');
     });
   });
+  describe('buildEurekaUrl()', () => {
+    let config;
+    let client;
+
+    afterEach(() => {
+      dns.resolveTxt.restore();
+    });
+
+    it('should pass error when lookupCurrentEurekaHost passes error', () => {
+      config = makeConfig();
+      client = new Eureka(config);
+
+      sinon.stub(dns, 'resolveTxt').yields(null, []);
+      sinon.stub(client, 'lookupCurrentEurekaHost').yields(new Error());
+      const spy = sinon.spy();
+      client.buildEurekaUrl(spy);
+      expect(spy.args[0][0]).to.be.instanceof(Error);
+    });
+  });
 
   describe('locateEurekaHostUsingDns()', () => {
     let config;
@@ -653,15 +808,14 @@ describe('Eureka client', () => {
       dns.resolveTxt.restore();
     });
 
-    it('should throw error when ec2Region is undefined', () => {
+    it('should pass error when ec2Region is undefined', () => {
       config = makeConfig();
       client = new Eureka(config);
 
       sinon.stub(dns, 'resolveTxt').yields(null, []);
-      function noRegion() {
-        client.locateEurekaHostUsingDns();
-      }
-      expect(noRegion).to.throw(Error);
+      const spy = sinon.spy();
+      client.locateEurekaHostUsingDns(spy);
+      expect(spy.args[0][0]).to.be.instanceof(Error);
     });
 
     it('should lookup server list using DNS', () => {
@@ -680,7 +834,54 @@ describe('Eureka client', () => {
       expect(dns.resolveTxt).to.have.been.calledWith(
         sinon.match(value => eurekaHosts.indexOf(value))
       );
-      expect(locateCb).to.have.been.calledWithMatch('1.2.3.4');
+      expect(locateCb).to.have.been.calledWithMatch(null, '1.2.3.4');
+    });
+
+    it('should return error when initial DNS lookup fails', () => {
+      config = makeConfig({
+        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
+      });
+      client = new Eureka(config);
+
+      const locateCb = sinon.spy();
+      const resolveStub = sinon.stub(dns, 'resolveTxt');
+      resolveStub.onCall(0).yields(new Error('dns error'), null);
+
+      function shouldNotThrow() {
+        client.locateEurekaHostUsingDns(locateCb);
+      }
+
+      expect(shouldNotThrow).to.not.throw();
+      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
+      expect(locateCb).to.have.been.calledWithMatch({
+        message: 'Error resolving eureka server ' +
+          'list for region [my-region] using DNS: [Error: dns error]',
+      });
+    });
+
+    it('should return error when DNS lookup fails for an individual Eureka server', () => {
+      config = makeConfig({
+        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
+      });
+      client = new Eureka(config);
+
+      const locateCb = sinon.spy();
+      const resolveStub = sinon.stub(dns, 'resolveTxt');
+      resolveStub.onCall(0).yields(null, [eurekaHosts]);
+      resolveStub.onCall(1).yields(new Error('dns error'), null);
+
+      function shouldNotThrow() {
+        client.locateEurekaHostUsingDns(locateCb);
+      }
+
+      expect(shouldNotThrow).to.not.throw();
+      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
+      expect(dns.resolveTxt).to.have.been.calledWith(
+        sinon.match(value => eurekaHosts.indexOf(value))
+      );
+      expect(locateCb).to.have.been.calledWithMatch({
+        message: 'Error locating eureka server using DNS: [Error: dns error]',
+      });
     });
   });
 });
