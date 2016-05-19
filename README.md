@@ -199,6 +199,12 @@ const client = new Eureka({
 });
 ```
 
+### 404 Not Found Errors from Eureka Server
+
+This probably means that the Eureka REST service is located on a different path in your environment. The default is `http://<EUREKA_HOST>/eureka/v2/apps`, but depending on your setup you may need to set `eureka.servicePath` in your configuration to another path.
+
+Start by hitting `http://<EUREKA_HOST>/eureka` to make sure you can load the Eureka dashboard. The REST service could be hung under `/eureka/apps` or possibly `/apps`. If you are using Spring Cloud you'll likely want to set `eureka.servicePath` in your config to `/eureka/apps`.
+
 ## Tests
 
 The test for the module are written using mocha and chai. To run the unit tests, you can use the gulp `test` task:
