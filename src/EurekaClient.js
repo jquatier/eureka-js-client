@@ -443,7 +443,7 @@ export default class Eureka extends EventEmitter {
     execute DNS lookups which is an async network operation.
   */
   lookupCurrentEurekaHost(callback = noop) {
-    if (this.amazonDataCenter && this.config.eureka.useDns) {
+    if (this.config.eureka.useDns) {
       this.locateEurekaHostUsingDns((err, resolvedHost) => callback(err, resolvedHost));
     } else {
       return callback(null, this.config.eureka.host);
