@@ -201,9 +201,42 @@ const client = new Eureka({
 
 ### 404 Not Found Errors from Eureka Server
 
-This probably means that the Eureka REST service is located on a different path in your environment. The default is `http://<EUREKA_HOST>/eureka/v2/apps`, but depending on your setup you may need to set `eureka.servicePath` in your configuration to another path.
+This probably means that the Eureka REST service is located on a different path in your environment. The default is `http://<EUREKA_HOST>/eureka/v2/apps`, but depending on your setup you may need to set `eureka.servicePath` in your configuration to another path. The REST service could be hung under `/eureka/apps/` or possibly `/apps/`.
 
-Start by hitting `http://<EUREKA_HOST>/eureka` to make sure you can load the Eureka dashboard. The REST service could be hung under `/eureka/apps/` or possibly `/apps/`. If you are using Spring Cloud you'll likely want to set `eureka.servicePath` in your config to `/eureka/apps/`.
+### Usage with Spring Cloud
+
+If you are using Spring Cloud you'll likely need the following settings:
+
+  - Set `eureka.servicePath` in your config to `/eureka/apps/`.
+  - Use the newer style of the configuration [here](#400-bad-request-errors-from-eureka-server) or Spring Cloud Eureka will throw a 500 error.
+  - Put single quotes around boolean `@enabled`. Unfortunately, a 500 error regarding parsing [seems to occur](https://github.com/jquatier/eureka-js-client/issues/63) without that.
+
+Below is an example configuration that should work with Spring Cloud Eureka server:
+
+```javascript
+const client = new Eureka({
+  instance: {
+    app: 'jqservice',
+    hostName: 'localhost',
+    ipAddr: '127.0.0.1',
+    statusPageUrl: 'http://localhost:8080',
+    port: {
+      '$': 8080,
+      '@enabled': 'true',
+    },
+    vipAddress: 'jq.test.something.com',
+    dataCenterInfo: {
+      '@class': 'com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo',
+      name: 'MyOwn',
+    },
+  },
+  eureka: {
+    host: '192.168.99.100',
+    port: 32768,
+    servicePath: '/eureka/apps/'
+  },
+});
+```
 
 ## Tests
 
