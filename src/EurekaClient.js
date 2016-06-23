@@ -306,6 +306,7 @@ export default class Eureka extends EventEmitter {
     const instances = this.cache.app[appId.toUpperCase()];
     if (!instances) {
       this.logger.warn(`Unable to retrieve instances for appId: ${appId}`);
+      instances = [];
     }
     return instances;
   }
