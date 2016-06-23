@@ -523,8 +523,8 @@ describe('Eureka client', () => {
       expect(actualInstances).to.equal(expectedInstances);
     });
 
-    it('should return undefined no instances were found for given appId', () => {
-      expect(client.getInstancesByAppId('THESERVICENAME')).to.equal(undefined);
+    it('should return empty array if no instances were found for given appId', () => {
+      expect(client.getInstancesByAppId('THESERVICENAME')).to.deep.equal([]);
     });
   });
 
@@ -551,8 +551,8 @@ describe('Eureka client', () => {
       expect(actualInstances).to.equal(expectedInstances);
     });
 
-    it('should return undefined no instances were found for given vipAddress', () => {
-      expect(client.getInstancesByVipAddress('the.vip.address')).to.equal(undefined);
+    it('should return empty array if no instances were found for given vipAddress', () => {
+      expect(client.getInstancesByVipAddress('the.vip.address')).to.deep.equal([]);
     });
   });
 

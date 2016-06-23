@@ -118,10 +118,10 @@ Notes:
   - For status and healthcheck URLs, you may use the replacement key of `__HOST__` to use the public host.
   - Metadata fetching can be disabled by setting `config.eureka.fetchMetadata` to `false` if you want to provide your own metadata in AWS environments.
 
-### Looking up Eureka Servers in AWS using DNS
-If your have multiple availability zones and your DNS entries set up according to the Wiki article [Configuring Eureka in AWS Cloud](https://github.com/Netflix/eureka/wiki/Configuring-Eureka-in-AWS-Cloud), you'll want to set `config.eureka.useDns` to `true` and set `config.eureka.ec2Region` to the current region (usually this can be pulled into your application via an environment variable, or passed in directly at startup).
+### Looking up Eureka Servers using DNS
+If your have multiple availability zones and your DNS entries set up according to the Wiki article [Deploying Eureka Servers in EC2](https://github.com/Netflix/eureka/wiki/Deploying-Eureka-Servers-in-EC2#configuring-eips-using-dns), you'll want to set `config.eureka.useDns` to `true` and set `config.eureka.ec2Region` to the current region (usually this can be pulled into your application via an environment variable, or passed in directly at startup).
 
-This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above.
+This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above. This feature will also work in non-EC2 environments as long as the DNS records conform to the same convention.
 
 ## Configuration Options
 option | default value | description
