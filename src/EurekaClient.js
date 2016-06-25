@@ -303,10 +303,9 @@ export default class Eureka extends EventEmitter {
     if (!appId) {
       throw new RangeError('Unable to query instances with no appId');
     }
-    const instances = this.cache.app[appId.toUpperCase()];
+    const instances = this.cache.app[appId.toUpperCase()] || [];
     if (!instances) {
       this.logger.warn(`Unable to retrieve instances for appId: ${appId}`);
-      instances = [];
     }
     return instances;
   }
