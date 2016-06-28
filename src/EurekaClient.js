@@ -317,7 +317,7 @@ export default class Eureka extends EventEmitter {
     if (!vipAddress) {
       throw new RangeError('Unable to query instances with no vipAddress');
     }
-    const instances = this.cache.vip[vipAddress];
+    const instances = this.cache.vip[vipAddress] || [];
     if (!instances) {
       this.logger.warn(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
