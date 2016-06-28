@@ -304,7 +304,7 @@ export default class Eureka extends EventEmitter {
       throw new RangeError('Unable to query instances with no appId');
     }
     const instances = this.cache.app[appId.toUpperCase()] || [];
-    if (!instances) {
+    if (instances.length === 0) {
       this.logger.warn(`Unable to retrieve instances for appId: ${appId}`);
     }
     return instances;
@@ -318,7 +318,7 @@ export default class Eureka extends EventEmitter {
       throw new RangeError('Unable to query instances with no vipAddress');
     }
     const instances = this.cache.vip[vipAddress] || [];
-    if (!instances) {
+    if (instances.length === 0) {
       this.logger.warn(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
     return instances;
