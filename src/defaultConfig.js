@@ -6,6 +6,7 @@ export default {
     fetchRegistry: true,
     filterUpInstances: true,
     servicePath: '/eureka/v2/apps/',
+    serviceUrl: [],
     ssl: false,
     useDns: false,
     fetchMetadata: true,

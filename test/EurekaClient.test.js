@@ -6,7 +6,7 @@ import request from 'request';
 import { EventEmitter } from 'events';
 import dns from 'dns';
 import { join } from 'path';
-import merge from 'deepmerge';
+import merge from 'lodash/merge';
 
 import Eureka from '../src/EurekaClient';
 
@@ -39,6 +39,16 @@ describe('Eureka client', () => {
         return new Eureka();
       }
       expect(fn).to.throw();
+    });
+
+    it('should merge host:port/servicePath into serviceUrl', () => {
+      const client = new Eureka(makeConfig({ eureka: {
+        serviceUrl: ['http://somehost:1122/eureka/apps/'],
+      } }));
+      expect(client.config.eureka.serviceUrl).to.deep.equal([
+        'http://somehost:1122/eureka/apps/',
+        'http://127.0.0.1:9999/eureka/v2/apps/',
+      ]);
     });
 
     it('should construct with the correct configuration values', () => {
@@ -117,7 +127,6 @@ describe('Eureka client', () => {
     let client;
     let registerSpy;
     let fetchRegistrySpy;
-    let heartbeatsSpy;
     let registryFetchSpy;
     before(() => {
       config = makeConfig();
@@ -127,14 +136,12 @@ describe('Eureka client', () => {
     after(() => {
       registerSpy.restore();
       fetchRegistrySpy.restore();
-      heartbeatsSpy.restore();
       registryFetchSpy.restore();
     });
 
-    it('should call register, fetch registry, startHeartbeat and startRegistryFetches', (done) => {
+    it('should call register, fetch registry and startRegistryFetches', (done) => {
       registerSpy = sinon.stub(client, 'register').callsArg(0);
       fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
-      heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
       registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
       const eventSpy = sinon.spy();
       client.on('started', eventSpy);
@@ -142,7 +149,6 @@ describe('Eureka client', () => {
       client.start(() => {
         expect(registerSpy).to.have.been.calledOnce;
         expect(fetchRegistrySpy).to.have.been.calledOnce;
-        expect(heartbeatsSpy).to.have.been.calledOnce;
         expect(registryFetchSpy).to.have.been.calledOnce;
         expect(registryFetchSpy).to.have.been.calledOnce;
         expect(eventSpy).to.have.been.calledOnce;
@@ -230,13 +236,18 @@ describe('Eureka client', () => {
     let config;
     let client;
     beforeEach(() => {
-      config = makeConfig();
+      config = makeConfig({ eureka: { serviceUrl: ['http://url1/', 'http://url2/'] } });
       client = new Eureka(config);
     });
 
-    afterEach(() => {
+    afterEach(done => {
       request.post.restore();
+
+      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      client.stop(() => done());
+      request.del.restore();
     });
+
     it('should trigger register event', () => {
       sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
       const eventSpy = sinon.spy();
@@ -262,7 +273,7 @@ describe('Eureka client', () => {
           },
         },
         json: true,
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
+        url: 'http://url1/app',
       });
 
       expect(registerCb).to.have.been.calledWithMatch(null);
@@ -278,12 +289,33 @@ describe('Eureka client', () => {
       });
     });
 
-    it('should throw error for request error', () => {
-      sinon.stub(request, 'post').yields(new Error('request error'), null, null);
+    it('should loop through server list and attempt to register;', () => {
       const registerCb = sinon.spy();
+      const stub = sinon.stub(request, 'post');
+      const clock = sinon.useFakeTimers();
+
       client.register(registerCb);
 
-      expect(registerCb).to.have.been.calledWithMatch({ message: 'request error' });
+      stub.yield(new Error('terribly bad'), null, null);
+      expect(registerCb).not.to.have.been.called;
+      expect(request.post).to.have.been.calledWithMatch({
+        url: 'http://url1/app',
+      });
+
+      clock.tick(2000);
+
+      stub.yield(new Error(), null, null);
+      expect(registerCb).not.to.have.been.called;
+      expect(request.post).to.have.been.calledWithMatch({
+        url: 'http://url2/app',
+      });
+
+      clock.tick(4000);
+
+      stub.yield(null, { statusCode: 204 }, null);
+      expect(registerCb).to.have.been.called;
+
+      clock.restore();
     });
   });
 
@@ -301,10 +333,12 @@ describe('Eureka client', () => {
 
     it('should should trigger deregister event', () => {
       sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
       const eventSpy = sinon.spy();
       client.on('deregistered', eventSpy);
       client.register();
-      client.deregister();
+      client.stop();
+      request.post.restore();
     });
 
     it('should call deregister URI', () => {
@@ -346,8 +380,12 @@ describe('Eureka client', () => {
       client = new Eureka(config);
     });
 
-    afterEach(() => {
+    afterEach(done => {
       request.put.restore();
+
+      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      client.stop(() => done());
+      request.del.restore();
     });
 
     it('should call heartbeat URI', () => {
@@ -391,6 +429,8 @@ describe('Eureka client', () => {
         json: true,
         url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
       });
+
+      request.post.restore();
     });
   });
 
@@ -773,25 +813,6 @@ describe('Eureka client', () => {
       expect(client.config.instance.ipAddr).to.equal('10.0.1.1');
       expect(client.config.instance.statusPageUrl).to.equal('http://fake-1:8080/');
       expect(client.config.instance.healthCheckUrl).to.equal('http://fake-1:8077/healthcheck');
-    });
-  });
-  describe('buildEurekaUrl()', () => {
-    let config;
-    let client;
-
-    afterEach(() => {
-      dns.resolveTxt.restore();
-    });
-
-    it('should pass error when lookupCurrentEurekaHost passes error', () => {
-      config = makeConfig();
-      client = new Eureka(config);
-
-      sinon.stub(dns, 'resolveTxt').yields(null, []);
-      sinon.stub(client, 'lookupCurrentEurekaHost').yields(new Error());
-      const spy = sinon.spy();
-      client.buildEurekaUrl(spy);
-      expect(spy.args[0][0]).to.be.instanceof(Error);
     });
   });
 
