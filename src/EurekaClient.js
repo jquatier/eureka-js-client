@@ -1,9 +1,10 @@
 import request from 'request';
 import fs from 'fs';
 import yaml from 'js-yaml';
-import merge from 'deepmerge';
+import merge from 'lodash/merge';
 import path from 'path';
 import dns from 'dns';
+import url from 'url';
 import { series } from 'async';
 import { EventEmitter } from 'events';
 
@@ -57,11 +58,15 @@ export default class Eureka extends EventEmitter {
     const filename = config.filename || 'eureka-client';
 
     // Load in the configuration files:
-    this.config = merge(defaultConfig, getYaml(path.join(cwd, `${filename}.yml`)));
-    this.config = merge(this.config, getYaml(path.join(cwd, `${filename}-${env}.yml`)));
+    this.config = {};
+    merge(this.config, defaultConfig, getYaml(path.join(cwd, `${filename}.yml`)));
+    merge(this.config, getYaml(path.join(cwd, `${filename}-${env}.yml`)));
 
     // Finally, merge in the passed configuration:
-    this.config = merge(this.config, config);
+    merge(this.config, config);
+
+    // Rearrange items so the config is non-redundant
+    this.rearrangeConfig(this.config);
 
     // Validate the provided the values we need:
     this.validateConfig(this.config);
@@ -102,15 +107,15 @@ export default class Eureka extends EventEmitter {
   }
 
   /*
-    Build the base Eureka server URL + path
+    Returns the current eureka service url
   */
-  buildEurekaUrl(callback = noop) {
-    this.lookupCurrentEurekaHost((err, eurekaHost) => {
-      if (err) return callback(err);
-      const { port, servicePath, ssl } = this.config.eureka;
-      const host = ssl ? 'https' : 'http';
-      callback(null, `${host}://${eurekaHost}:${port}${servicePath}`);
-    });
+  get currentServiceUrl() {
+    // This array is rotated when switching, so 0 is always current.
+    return this.config.eureka.serviceUrl[0];
+  }
+
+  rotateCurrentServiceUrl() {
+    this.config.eureka.serviceUrl.push(this.config.eureka.serviceUrl.shift());
   }
 
   /*
@@ -128,7 +133,6 @@ export default class Eureka extends EventEmitter {
         this.register(done);
       },
       done => {
-        this.startHeartbeats();
         if (this.config.eureka.fetchRegistry) {
           this.startRegistryFetches();
           if (this.config.eureka.waitForRegistry) {
@@ -157,9 +161,26 @@ export default class Eureka extends EventEmitter {
     De-registers instance with Eureka, stops heartbeats / registry fetches.
   */
   stop(callback = noop) {
-    this.deregister(callback);
-    clearInterval(this.heartbeat);
     clearInterval(this.registryFetch);
+    clearTimeout(this.reregisterTimeout);
+    this.stopHeartbeats();
+    this.deregister(callback);
+  }
+
+  /*
+    Rearranges config so that all entries are non redundant.
+    For example, `host`, `port` and `servicePath` will be merged into `serviceUrl`
+  */
+  rearrangeConfig(config) {
+    const { host, port, servicePath, ssl } = config.eureka;
+    if (host && port && servicePath) {
+      const protocol = ssl ? 'https' : 'http';
+      config.eureka.serviceUrl.push(`${protocol}://${host}:${port}${servicePath}`);
+    }
+    delete config.eureka.host;
+    delete config.eureka.port;
+    delete config.eureka.servicePath;
+    return config;
   }
 
   /*
@@ -176,8 +197,11 @@ export default class Eureka extends EventEmitter {
     validate('instance', 'vipAddress');
     validate('instance', 'port');
     validate('instance', 'dataCenterInfo');
-    validate('eureka', 'host');
-    validate('eureka', 'port');
+
+    if (config.eureka.serviceUrl.length === 0) {
+      throw new TypeError(`At least one eureka service url must be specified ` +
+        `with either 'host' and 'port' or 'serviceUrl'`);
+    }
   }
 
   /*
@@ -190,7 +214,8 @@ export default class Eureka extends EventEmitter {
         'Eureka. This usually means there is an issue connecting to the host ' +
         'specified. Start application with NODE_DEBUG=request for more logging.');
     }, 10000);
-    this.buildEurekaUrl((err, eurekaUrl) => {
+    this.lookupCurrentEurekaHost((err, eurekaUrl) => {
+      this.logger.info(`Attempting to register with eureka at '${eurekaUrl}'.`);
       if (err) return callback(err);
       request.post({
         url: eurekaUrl + this.config.instance.app,
@@ -205,10 +230,14 @@ export default class Eureka extends EventEmitter {
             `${this.config.instance.app}/${this.instanceId}`
           );
           this.emit('registered');
+          this.startHeartbeats();
           return callback(null);
         } else if (error) {
-          this.logger.warn('Error registering with eureka client.', error);
-          return callback(error);
+          this.logger.warn('Error registering with eureka. Trying next server in list', error);
+          this.rotateCurrentServiceUrl();
+          const backoff = Math.floor(Math.random() * 2000); // Should strategy be more advanced?
+          this.reregisterTimeout = setTimeout(() => this.register(callback), backoff);
+          return null;
         }
         return callback(
           new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`)
@@ -221,7 +250,7 @@ export default class Eureka extends EventEmitter {
     De-registers with the Eureka server and stops heartbeats.
   */
   deregister(callback = noop) {
-    this.buildEurekaUrl((err, eurekaUrl) => {
+    this.lookupCurrentEurekaHost((err, eurekaUrl) => {
       if (err) return callback(err);
       request.del({
         url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
@@ -255,8 +284,12 @@ export default class Eureka extends EventEmitter {
     }, this.config.eureka.heartbeatInterval);
   }
 
+  stopHeartbeats() {
+    clearInterval(this.heartbeat);
+  }
+
   renew() {
-    this.buildEurekaUrl((err, eurekaUrl) => {
+    this.lookupCurrentEurekaHost((err, eurekaUrl) => {
       if (err) {
         this.logger.warn('eureka heartbeat FAILED, will retry', err);
         return;
@@ -270,15 +303,19 @@ export default class Eureka extends EventEmitter {
           this.emit('heartbeat');
         } else if (!error && response.statusCode === 404) {
           this.logger.warn('eureka heartbeat FAILED, Re-registering app');
+          this.stopHeartbeats();
           this.register();
         } else {
           if (error) {
             this.logger.error('An error in the request occured.', error);
           }
           this.logger.warn(
-            'eureka heartbeat FAILED, will retry.',
+            'eureka heartbeat FAILED, will re-register with next server in list',
             `status: ${response ? response.statusCode : 'unknown'} body: ${body}`
           );
+          this.stopHeartbeats();
+          this.rotateCurrentServiceUrl(); // Current just failed. Try next in list.
+          this.register();
         }
       });
     });
@@ -328,7 +365,7 @@ export default class Eureka extends EventEmitter {
     Retrieves all applications registered with the Eureka server
    */
   fetchRegistry(callback = noop) {
-    this.buildEurekaUrl((err, eurekaUrl) => {
+    this.lookupCurrentEurekaHost((err, eurekaUrl) => {
       if (err) return callback(err);
       request.get({
         url: eurekaUrl,
@@ -444,9 +481,13 @@ export default class Eureka extends EventEmitter {
   */
   lookupCurrentEurekaHost(callback = noop) {
     if (this.config.eureka.useDns) {
-      this.locateEurekaHostUsingDns((err, resolvedHost) => callback(err, resolvedHost));
+      this.locateEurekaHostUsingDns((err, resolvedHost) => {
+        const parsed = url.parse(this.currentServiceUrl);
+        parsed.host = resolvedHost;
+        callback(err, url.format(parsed));
+      });
     } else {
-      return callback(null, this.config.eureka.host);
+      return callback(null, this.currentServiceUrl);
     }
   }
 
@@ -458,7 +499,9 @@ export default class Eureka extends EventEmitter {
     Naming convention: txt.<REGION>.<HOST>
    */
   locateEurekaHostUsingDns(callback = noop) {
-    const { ec2Region, host } = this.config.eureka;
+    const currentServiceUrl = this.currentServiceUrl;
+    const { host } = url.parse(currentServiceUrl);
+    const { ec2Region } = this.config.eureka;
     if (!ec2Region) {
       return callback(new Error(
         'EC2 region was undefined. ' +

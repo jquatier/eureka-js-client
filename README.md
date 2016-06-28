@@ -35,9 +35,10 @@ const client = new Eureka({
     },
   },
   eureka: {
-    // eureka server host / port
-    host: '192.168.99.100',
-    port: 32768,
+    serviceUrl: [
+      'http://192.168.99.100:8761/eureka/v2/apps/',
+      'http://192.168.99.100:32768/eureka/v2/apps/'
+    ]
   },
 });
 ```
@@ -121,7 +122,7 @@ Notes:
 ### Looking up Eureka Servers in AWS using DNS
 If your have multiple availability zones and your DNS entries set up according to the Wiki article [Configuring Eureka in AWS Cloud](https://github.com/Netflix/eureka/wiki/Configuring-Eureka-in-AWS-Cloud), you'll want to set `config.eureka.useDns` to `true` and set `config.eureka.ec2Region` to the current region (usually this can be pulled into your application via an environment variable, or passed in directly at startup).
 
-This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above.
+This will cause the client to perform a DNS lookup using the host of the currently selected server in `config.eureka.serviceUrl` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above.
 
 ## Configuration Options
 option | default value | description
@@ -131,7 +132,6 @@ option | default value | description
 `eureka.registryFetchInterval` | `30000` | milliseconds to wait between registry fetches
 `eureka.fetchRegistry` | `true` | enable/disable registry fetching
 `eureka.filterUpInstances` | `true` | enable/disable filtering of instances with status === `UP`
-`eureka.servicePath` | `/eureka/v2/apps/` | path to eureka REST service
 `eureka.ssl` | `false` | enable SSL communication with Eureka server
 `eureka.useDns` | `false` | look up Eureka server using DNS, see [Looking up Eureka Servers in AWS using DNS](#looking-up-eureka-servers-in-aws-using-dns)
 `eureka.fetchMetadata` | `true` | fetch AWS metadata when in AWS environment, see [Configuring for AWS environments](#configuring-for-aws-environments)
@@ -193,8 +193,7 @@ const client = new Eureka({
   },
   eureka: {
     // eureka server host / port
-    host: '192.168.99.100',
-    port: 32768,
+    serviceUrl: [ 'http://192.168.99.100:32768/eureka/v2/apps/' ],
   },
 });
 ```
@@ -207,7 +206,7 @@ This probably means that the Eureka REST service is located on a different path 
 
 If you are using Spring Cloud you'll likely need the following settings:
 
-  - Set `eureka.servicePath` in your config to `/eureka/apps/`.
+  - Set the path of the serviceUrl to `/eureka/apps/`.
   - Use the newer style of the configuration [here](#400-bad-request-errors-from-eureka-server) or Spring Cloud Eureka will throw a 500 error.
   - Put single quotes around boolean `@enabled`. Unfortunately, a 500 error regarding parsing [seems to occur](https://github.com/jquatier/eureka-js-client/issues/63) without that.
 
@@ -231,9 +230,7 @@ const client = new Eureka({
     },
   },
   eureka: {
-    host: '192.168.99.100',
-    port: 32768,
-    servicePath: '/eureka/apps/'
+    serviceUrl: [ 'http://192.168.99.100:32768/eureka/apps/' ],
   },
 });
 ```
