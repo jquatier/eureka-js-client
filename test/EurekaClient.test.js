@@ -376,7 +376,7 @@ describe('Eureka client', () => {
     let config;
     let client;
     beforeEach(() => {
-      config = makeConfig();
+      config = makeConfig({ eureka: { serviceUrl: ['http://url1/apps/', 'http://url2/'] } });
       client = new Eureka(config);
     });
 
@@ -393,7 +393,7 @@ describe('Eureka client', () => {
       client.renew();
 
       expect(request.put).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+        url: 'http://url1/apps/app/myhost',
       });
     });
 
@@ -412,7 +412,7 @@ describe('Eureka client', () => {
       client.renew();
 
       expect(request.put).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+        url: 'http://url1/apps/app/myhost',
       });
 
       expect(request.post).to.have.been.calledWithMatch({
@@ -427,7 +427,24 @@ describe('Eureka client', () => {
           },
         },
         json: true,
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
+        url: 'http://url1/apps/app',
+      });
+
+      request.post.restore();
+    });
+
+    it('should change to next server in list on heartbeat failure', () => {
+      sinon.stub(request, 'put').yields(new Error(), null, null);
+      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
+
+      client.renew();
+
+      expect(request.put).to.have.been.calledWithMatch({
+        url: 'http://url1/apps/app/myhost',
+      });
+
+      expect(request.post).to.have.been.calledWithMatch({
+        url: 'http://url2/app',
       });
 
       request.post.restore();
