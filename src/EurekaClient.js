@@ -1,7 +1,7 @@
 import request from 'request';
 import fs from 'fs';
 import yaml from 'js-yaml';
-import merge from 'deepmerge';
+import merge from 'lodash/merge';
 import path from 'path';
 import dns from 'dns';
 import { series } from 'async';
@@ -57,11 +57,11 @@ export default class Eureka extends EventEmitter {
     const filename = config.filename || 'eureka-client';
 
     // Load in the configuration files:
-    this.config = merge(defaultConfig, getYaml(path.join(cwd, `${filename}.yml`)));
-    this.config = merge(this.config, getYaml(path.join(cwd, `${filename}-${env}.yml`)));
+    const defaultYml = getYaml(path.join(cwd, `${filename}.yml`));
+    const envYml = getYaml(path.join(cwd, `${filename}-${env}.yml`));
 
-    // Finally, merge in the passed configuration:
-    this.config = merge(this.config, config);
+    // apply config overrides in appropriate order
+    this.config = merge({}, defaultConfig, defaultYml, envYml, config);
 
     // Validate the provided the values we need:
     this.validateConfig(this.config);
