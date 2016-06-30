@@ -1,4 +1,4 @@
-
+/* eslint-disable no-underscore-dangle */
 const LEVELS = {
   error: 50,
   warn: 40,
@@ -32,16 +32,16 @@ export default class Logger {
     }
   }
 
-  error() {
-    return this._log('error', arguments);
+  error(...args) {
+    return this._log('error', args);
   }
-  warn() {
-    return this._log('warn', arguments);
+  warn(...args) {
+    return this._log('warn', args);
   }
-  info() {
-    return this._log('info', arguments);
+  info(...args) {
+    return this._log('info', args);
   }
-  debug() {
-    return this._log('log', arguments);
+  debug(...args) {
+    return this._log('log', args);
   }
 }
