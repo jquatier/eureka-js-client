@@ -6,7 +6,7 @@ import request from 'request';
 import { EventEmitter } from 'events';
 import dns from 'dns';
 import { join } from 'path';
-import merge from 'deepmerge';
+import merge from 'lodash/merge';
 
 import Eureka from '../src/EurekaClient';
 
@@ -25,7 +25,7 @@ function makeConfig(overrides = {}) {
     },
     eureka: { host: '127.0.0.1', port: 9999 },
   };
-  return merge(config, overrides);
+  return merge({}, config, overrides);
 }
 
 describe('Eureka client', () => {
