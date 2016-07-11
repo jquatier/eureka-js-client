@@ -441,7 +441,7 @@ export default class Eureka extends EventEmitter {
   eurekaRequest(opts, callback) {
     this.buildEurekaUrl((err, eurekaUrl) => {
       if (err) return callback(err);
-      const requestOpts = Object.assign({
+      const requestOpts = merge({
         baseUrl: eurekaUrl,
         gzip: true,
       }, opts);
