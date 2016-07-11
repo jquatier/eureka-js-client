@@ -262,7 +262,8 @@ describe('Eureka client', () => {
           },
         },
         json: true,
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app',
       });
 
       expect(registerCb).to.have.been.calledWithMatch(null);
@@ -296,11 +297,11 @@ describe('Eureka client', () => {
     });
 
     afterEach(() => {
-      request.del.restore();
+      request.delete.restore();
     });
 
     it('should should trigger deregister event', () => {
-      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      sinon.stub(request, 'delete').yields(null, { statusCode: 200 }, null);
       const eventSpy = sinon.spy();
       client.on('deregistered', eventSpy);
       client.register();
@@ -308,19 +309,20 @@ describe('Eureka client', () => {
     });
 
     it('should call deregister URI', () => {
-      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      sinon.stub(request, 'delete').yields(null, { statusCode: 200 }, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
-      expect(request.del).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+      expect(request.delete).to.have.been.calledWithMatch({
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app/myhost',
       });
 
       expect(deregisterCb).to.have.been.calledWithMatch(null);
     });
 
     it('should throw error for non-200 response', () => {
-      sinon.stub(request, 'del').yields(null, { statusCode: 500 }, null);
+      sinon.stub(request, 'delete').yields(null, { statusCode: 500 }, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
@@ -330,7 +332,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for request error', () => {
-      sinon.stub(request, 'del').yields(new Error('request error'), null, null);
+      sinon.stub(request, 'delete').yields(new Error('request error'), null, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
@@ -355,7 +357,8 @@ describe('Eureka client', () => {
       client.renew();
 
       expect(request.put).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app/myhost',
       });
     });
 
@@ -374,7 +377,8 @@ describe('Eureka client', () => {
       client.renew();
 
       expect(request.put).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app/myhost',
       });
 
       expect(request.post).to.have.been.calledWithMatch({
@@ -389,7 +393,8 @@ describe('Eureka client', () => {
           },
         },
         json: true,
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app',
       });
     });
   });
@@ -584,7 +589,8 @@ describe('Eureka client', () => {
       client.fetchRegistry(registryCb);
 
       expect(request.get).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: '',
         headers: { Accept: 'application/json' },
       });
 
