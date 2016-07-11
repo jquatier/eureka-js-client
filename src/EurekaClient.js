@@ -192,7 +192,7 @@ export default class Eureka extends EventEmitter {
     }, 10000);
     this.eurekaRequest({
       method: 'POST',
-      url: this.config.instance.app,
+      uri: this.config.instance.app,
       json: true,
       body: { instance: this.config.instance },
     }, (error, response, body) => {
@@ -220,7 +220,7 @@ export default class Eureka extends EventEmitter {
   deregister(callback = noop) {
     this.eurekaRequest({
       method: 'DELETE',
-      url: `${this.config.instance.app}/${this.instanceId}`,
+      uri: `${this.config.instance.app}/${this.instanceId}`,
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
         this.logger.info(
@@ -251,7 +251,7 @@ export default class Eureka extends EventEmitter {
   renew() {
     this.eurekaRequest({
       method: 'PUT',
-      url: `${this.config.instance.app}/${this.instanceId}`,
+      uri: `${this.config.instance.app}/${this.instanceId}`,
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
         this.logger.debug('eureka heartbeat success');
@@ -317,7 +317,7 @@ export default class Eureka extends EventEmitter {
    */
   fetchRegistry(callback = noop) {
     this.eurekaRequest({
-      url: '',
+      uri: '',
       headers: {
         Accept: 'application/json',
       },

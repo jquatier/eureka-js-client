@@ -263,7 +263,7 @@ describe('Eureka client', () => {
         },
         json: true,
         baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        url: 'app',
+        uri: 'app',
       });
 
       expect(registerCb).to.have.been.calledWithMatch(null);
@@ -315,7 +315,7 @@ describe('Eureka client', () => {
 
       expect(request.delete).to.have.been.calledWithMatch({
         baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        url: 'app/myhost',
+        uri: 'app/myhost',
       });
 
       expect(deregisterCb).to.have.been.calledWithMatch(null);
@@ -358,7 +358,7 @@ describe('Eureka client', () => {
 
       expect(request.put).to.have.been.calledWithMatch({
         baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        url: 'app/myhost',
+        uri: 'app/myhost',
       });
     });
 
@@ -378,7 +378,7 @@ describe('Eureka client', () => {
 
       expect(request.put).to.have.been.calledWithMatch({
         baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        url: 'app/myhost',
+        uri: 'app/myhost',
       });
 
       expect(request.post).to.have.been.calledWithMatch({
@@ -394,7 +394,7 @@ describe('Eureka client', () => {
         },
         json: true,
         baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        url: 'app',
+        uri: 'app',
       });
     });
   });
@@ -590,7 +590,7 @@ describe('Eureka client', () => {
 
       expect(request.get).to.have.been.calledWithMatch({
         baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        url: '',
+        uri: '',
         headers: { Accept: 'application/json' },
       });
 
