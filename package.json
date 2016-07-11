@@ -51,6 +51,11 @@
     "sinon-chai": "^2.8.0"
   },
   "greenkeeper": {
-    "ignore": ["eslint", "eslint-config-airbnb-base", "eslint-plugin-import", "gulp-eslint"]
+    "ignore": [
+      "eslint",
+      "eslint-config-airbnb-base",
+      "eslint-plugin-import",
+      "gulp-eslint"
+    ]
   }
 }

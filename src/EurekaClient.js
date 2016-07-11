@@ -190,30 +190,27 @@ export default class Eureka extends EventEmitter {
         'Eureka. This usually means there is an issue connecting to the host ' +
         'specified. Start application with NODE_DEBUG=request for more logging.');
     }, 10000);
-    this.buildEurekaUrl((err, eurekaUrl) => {
-      if (err) return callback(err);
-      request.post({
-        url: eurekaUrl + this.config.instance.app,
-        json: true,
-        body: { instance: this.config.instance },
-        gzip: true,
-      }, (error, response, body) => {
-        clearTimeout(connectionTimeout);
-        if (!error && response.statusCode === 204) {
-          this.logger.info(
-            'registered with eureka: ',
-            `${this.config.instance.app}/${this.instanceId}`
-          );
-          this.emit('registered');
-          return callback(null);
-        } else if (error) {
-          this.logger.warn('Error registering with eureka client.', error);
-          return callback(error);
-        }
-        return callback(
-          new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`)
+    this.eurekaRequest({
+      method: 'POST',
+      url: this.config.instance.app,
+      json: true,
+      body: { instance: this.config.instance },
+    }, (error, response, body) => {
+      clearTimeout(connectionTimeout);
+      if (!error && response.statusCode === 204) {
+        this.logger.info(
+          'registered with eureka: ',
+          `${this.config.instance.app}/${this.instanceId}`
         );
-      });
+        this.emit('registered');
+        return callback(null);
+      } else if (error) {
+        this.logger.warn('Error registering with eureka client.', error);
+        return callback(error);
+      }
+      return callback(
+        new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`)
+      );
     });
   }
 
@@ -221,27 +218,23 @@ export default class Eureka extends EventEmitter {
     De-registers with the Eureka server and stops heartbeats.
   */
   deregister(callback = noop) {
-    this.buildEurekaUrl((err, eurekaUrl) => {
-      if (err) return callback(err);
-      request.del({
-        url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
-        gzip: true,
-      }, (error, response, body) => {
-        if (!error && response.statusCode === 200) {
-          this.logger.info(
-            'de-registered with eureka: ',
-            `${this.config.instance.app}/${this.instanceId}`
-          );
-          this.emit('deregistered');
-          return callback(null);
-        } else if (error) {
-          this.logger.warn('Error deregistering with eureka', error);
-          return callback(error);
-        }
-        return callback(
-          new Error(`eureka deregistration FAILED: status: ${response.statusCode} body: ${body}`)
+    this.eurekaRequest({
+      method: 'DELETE',
+      url: `${this.config.instance.app}/${this.instanceId}`,
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.info(
+          `de-registered with eureka: ${this.config.instance.app}/${this.instanceId}`
         );
-      });
+        this.emit('deregistered');
+        return callback(null);
+      } else if (error) {
+        this.logger.warn('Error deregistering with eureka', error);
+        return callback(error);
+      }
+      return callback(
+        new Error(`eureka deregistration FAILED: status: ${response.statusCode} body: ${body}`)
+      );
     });
   }
 
@@ -256,31 +249,26 @@ export default class Eureka extends EventEmitter {
   }
 
   renew() {
-    this.buildEurekaUrl((err, eurekaUrl) => {
-      if (err) {
-        this.logger.warn('eureka heartbeat FAILED, will retry', err);
-        return;
-      }
-      request.put({
-        url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
-        gzip: true,
-      }, (error, response, body) => {
-        if (!error && response.statusCode === 200) {
-          this.logger.debug('eureka heartbeat success');
-          this.emit('heartbeat');
-        } else if (!error && response.statusCode === 404) {
-          this.logger.warn('eureka heartbeat FAILED, Re-registering app');
-          this.register();
-        } else {
-          if (error) {
-            this.logger.error('An error in the request occured.', error);
-          }
-          this.logger.warn(
-            'eureka heartbeat FAILED, will retry.',
-            `status: ${response ? response.statusCode : 'unknown'} body: ${body}`
-          );
+    this.eurekaRequest({
+      method: 'PUT',
+      url: `${this.config.instance.app}/${this.instanceId}`,
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.debug('eureka heartbeat success');
+        this.emit('heartbeat');
+      } else if (!error && response.statusCode === 404) {
+        this.logger.warn('eureka heartbeat FAILED, Re-registering app');
+        this.register();
+      } else {
+        if (error) {
+          this.logger.error('An error in the request occured.', error);
         }
-      });
+        this.logger.warn(
+          'eureka heartbeat FAILED, will retry.' +
+          `statusCode: ${response ? response.statusCode : 'unknown'}` +
+          `body: ${body} ${error | ''} `
+        );
+      }
     });
   }
 
@@ -328,26 +316,22 @@ export default class Eureka extends EventEmitter {
     Retrieves all applications registered with the Eureka server
    */
   fetchRegistry(callback = noop) {
-    this.buildEurekaUrl((err, eurekaUrl) => {
-      if (err) return callback(err);
-      request.get({
-        url: eurekaUrl,
-        headers: {
-          Accept: 'application/json',
-        },
-        gzip: true,
-      }, (error, response, body) => {
-        if (!error && response.statusCode === 200) {
-          this.logger.debug('retrieved registry successfully');
-          this.transformRegistry(JSON.parse(body));
-          this.emit('registryUpdated');
-          return callback(null);
-        } else if (error) {
-          this.logger.warn('Error fetching registry', error);
-          return callback(error);
-        }
-        callback(new Error('Unable to retrieve registry from Eureka server'));
-      });
+    this.eurekaRequest({
+      url: '',
+      headers: {
+        Accept: 'application/json',
+      },
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.debug('retrieved registry successfully');
+        this.transformRegistry(JSON.parse(body));
+        this.emit('registryUpdated');
+        return callback(null);
+      } else if (error) {
+        this.logger.warn('Error fetching registry', error);
+        return callback(error);
+      }
+      callback(new Error('Unable to retrieve registry from Eureka server'));
     });
   }
 
@@ -448,6 +432,21 @@ export default class Eureka extends EventEmitter {
     } else {
       return callback(null, this.config.eureka.host);
     }
+  }
+
+  /*
+    Helper method for making a request to the Eureka server. Handles resolving
+    the current cluster as well as some default options.
+  */
+  eurekaRequest(opts, callback) {
+    this.buildEurekaUrl((err, eurekaUrl) => {
+      if (err) return callback(err);
+      const requestOpts = Object.assign({
+        baseUrl: eurekaUrl,
+        gzip: true,
+      }, opts);
+      request[requestOpts.method ? requestOpts.method.toLowerCase() : 'get'](requestOpts, callback);
+    });
   }
 
   /*
