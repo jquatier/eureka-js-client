@@ -4,7 +4,6 @@ import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 import request from 'request';
 import { EventEmitter } from 'events';
-import dns from 'dns';
 import { join } from 'path';
 import merge from 'lodash/merge';
 
@@ -23,7 +22,7 @@ function makeConfig(overrides = {}) {
         name: 'MyOwn',
       },
     },
-    eureka: { host: '127.0.0.1', port: 9999 },
+    eureka: { host: '127.0.0.1', port: 9999, maxRetries: 0 },
   };
   return merge({}, config, overrides);
 }
@@ -781,113 +780,8 @@ describe('Eureka client', () => {
       expect(client.config.instance.healthCheckUrl).to.equal('http://fake-1:8077/healthcheck');
     });
   });
-  describe('buildEurekaUrl()', () => {
-    let config;
-    let client;
 
-    afterEach(() => {
-      dns.resolveTxt.restore();
-    });
-
-    it('should pass error when lookupCurrentEurekaHost passes error', () => {
-      config = makeConfig();
-      client = new Eureka(config);
-
-      sinon.stub(dns, 'resolveTxt').yields(null, []);
-      sinon.stub(client, 'lookupCurrentEurekaHost').yields(new Error());
-      const spy = sinon.spy();
-      client.buildEurekaUrl(spy);
-      expect(spy.args[0][0]).to.be.instanceof(Error);
-    });
-  });
-
-  describe('locateEurekaHostUsingDns()', () => {
-    let config;
-    let client;
-    const eurekaHosts = [
-      '1a.eureka.mydomain.com',
-      '1b.eureka.mydomain.com',
-      '1c.eureka.mydomain.com',
-    ];
-
-    afterEach(() => {
-      dns.resolveTxt.restore();
-    });
-
-    it('should pass error when ec2Region is undefined', () => {
-      config = makeConfig();
-      client = new Eureka(config);
-
-      sinon.stub(dns, 'resolveTxt').yields(null, []);
-      const spy = sinon.spy();
-      client.locateEurekaHostUsingDns(spy);
-      expect(spy.args[0][0]).to.be.instanceof(Error);
-    });
-
-    it('should lookup server list using DNS', () => {
-      config = makeConfig({
-        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
-      });
-      client = new Eureka(config);
-
-      const locateCb = sinon.spy();
-      const resolveStub = sinon.stub(dns, 'resolveTxt');
-      resolveStub.onCall(0).yields(null, [eurekaHosts]);
-      resolveStub.onCall(1).yields(null, [['1.2.3.4']]);
-      client.locateEurekaHostUsingDns(locateCb);
-
-      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
-      expect(dns.resolveTxt).to.have.been.calledWith(
-        sinon.match(value => eurekaHosts.indexOf(value))
-      );
-      expect(locateCb).to.have.been.calledWithMatch(null, '1.2.3.4');
-    });
-
-    it('should return error when initial DNS lookup fails', () => {
-      config = makeConfig({
-        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
-      });
-      client = new Eureka(config);
-
-      const locateCb = sinon.spy();
-      const resolveStub = sinon.stub(dns, 'resolveTxt');
-      resolveStub.onCall(0).yields(new Error('dns error'), null);
-
-      function shouldNotThrow() {
-        client.locateEurekaHostUsingDns(locateCb);
-      }
-
-      expect(shouldNotThrow).to.not.throw();
-      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
-      expect(locateCb).to.have.been.calledWithMatch({
-        message: 'Error resolving eureka server ' +
-          'list for region [my-region] using DNS: [Error: dns error]',
-      });
-    });
-
-    it('should return error when DNS lookup fails for an individual Eureka server', () => {
-      config = makeConfig({
-        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
-      });
-      client = new Eureka(config);
-
-      const locateCb = sinon.spy();
-      const resolveStub = sinon.stub(dns, 'resolveTxt');
-      resolveStub.onCall(0).yields(null, [eurekaHosts]);
-      resolveStub.onCall(1).yields(new Error('dns error'), null);
-
-      function shouldNotThrow() {
-        client.locateEurekaHostUsingDns(locateCb);
-      }
-
-      expect(shouldNotThrow).to.not.throw();
-      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
-      expect(dns.resolveTxt).to.have.been.calledWith(
-        sinon.match(value => eurekaHosts.indexOf(value))
-      );
-      expect(locateCb).to.have.been.calledWithMatch({
-        message: 'Error locating eureka server using DNS: [Error: dns error]',
-      });
-    });
+  describe('eurekaRequest()', () => {
+    // code goes here for retries, etc.
   });
 });
