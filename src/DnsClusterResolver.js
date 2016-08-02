@@ -100,7 +100,7 @@ export default class DnsClusterResolver {
         const hosts = [];
         const myZoneHosts = [];
         Object.keys(results).forEach((zone) => {
-          if (preferSameZone && availabilityZone && zone.startsWith(availabilityZone)) {
+          if (preferSameZone && availabilityZone && zone.lastIndexOf(availabilityZone, 0) === 0) {
             myZoneHosts.push(...results[zone]);
           } else {
             hosts.push(...results[zone]);
