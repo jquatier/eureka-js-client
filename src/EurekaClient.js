@@ -3,11 +3,12 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import merge from 'lodash/merge';
 import path from 'path';
-import dns from 'dns';
 import { series } from 'async';
 import { EventEmitter } from 'events';
 
 import AwsMetadata from './AwsMetadata';
+import ConfigClusterResolver from './ConfigClusterResolver';
+import DnsClusterResolver from './DnsClusterResolver';
 import Logger from './Logger';
 import defaultConfig from './defaultConfig';
 
@@ -72,6 +73,12 @@ export default class Eureka extends EventEmitter {
       });
     }
 
+    if (this.config.eureka.useDns) {
+      this.clusterResolver = new DnsClusterResolver(this.config);
+    } else {
+      this.clusterResolver = new ConfigClusterResolver(this.config);
+    }
+
     this.cache = {
       app: {},
       vip: {},
@@ -99,18 +106,6 @@ export default class Eureka extends EventEmitter {
       this.config.instance.dataCenterInfo.name &&
       this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon'
     );
-  }
-
-  /*
-    Build the base Eureka server URL + path
-  */
-  buildEurekaUrl(callback = noop) {
-    this.lookupCurrentEurekaHost((err, eurekaHost) => {
-      if (err) return callback(err);
-      const { port, servicePath, ssl } = this.config.eureka;
-      const host = ssl ? 'https' : 'http';
-      callback(null, `${host}://${eurekaHost}:${port}${servicePath}`);
-    });
   }
 
   /*
@@ -423,63 +418,28 @@ export default class Eureka extends EventEmitter {
   }
 
   /*
-    Returns the Eureka host. This method is async because potentially we might have to
-    execute DNS lookups which is an async network operation.
-  */
-  lookupCurrentEurekaHost(callback = noop) {
-    if (this.config.eureka.useDns) {
-      this.locateEurekaHostUsingDns((err, resolvedHost) => callback(err, resolvedHost));
-    } else {
-      return callback(null, this.config.eureka.host);
-    }
-  }
-
-  /*
     Helper method for making a request to the Eureka server. Handles resolving
     the current cluster as well as some default options.
   */
-  eurekaRequest(opts, callback) {
-    this.buildEurekaUrl((err, eurekaUrl) => {
+  eurekaRequest(opts, callback, retryAttempt = 0) {
+    this.clusterResolver.resolveEurekaUrl((err, eurekaUrl) => {
       if (err) return callback(err);
       const requestOpts = merge({
         baseUrl: eurekaUrl,
         gzip: true,
       }, opts);
-      request[requestOpts.method ? requestOpts.method.toLowerCase() : 'get'](requestOpts, callback);
-    });
-  }
-
-  /*
-    Locates a Eureka host using DNS lookups. The DNS records are looked up by a naming
-    convention and TXT records must be created according to the Eureka Wiki here:
-    https://github.com/Netflix/eureka/wiki/Configuring-Eureka-in-AWS-Cloud
-
-    Naming convention: txt.<REGION>.<HOST>
-   */
-  locateEurekaHostUsingDns(callback = noop) {
-    const { ec2Region, host } = this.config.eureka;
-    if (!ec2Region) {
-      return callback(new Error(
-        'EC2 region was undefined. ' +
-        'config.eureka.ec2Region must be set to resolve Eureka using DNS records.'
-      ));
-    }
-    dns.resolveTxt(`txt.${ec2Region}.${host}`, (err, addresses) => {
-      if (err) {
-        return callback(new Error(
-          `Error resolving eureka server list for region [${ec2Region}] using DNS: [${err}]`
-        ));
-      }
-      const random = Math.floor(Math.random() * addresses[0].length);
-      dns.resolveTxt(`txt.${addresses[0][random]}`, (resolveErr, results) => {
-        if (resolveErr) {
-          this.logger.warn('Failed to locate DNS record for Eureka', resolveErr);
-          callback(new Error(`Error locating eureka server using DNS: [${resolveErr}]`));
-        }
-        this.logger.debug('Found Eureka Server @ ', results);
-        callback(null, [].concat(...results).shift());
-      });
-    });
+      request[requestOpts.method ? requestOpts.method.toLowerCase() : 'get'](requestOpts,
+        (error, response, body) => {
+          if ((error ||
+              (response && response.statusCode && String(response.statusCode)[0] === '5')) &&
+            retryAttempt < this.config.eureka.maxRetries) {
+            setTimeout(() => this.eurekaRequest(opts, callback, retryAttempt + 1),
+              500 * (retryAttempt + 1));
+            return;
+          }
+          callback(error, response, body);
+        });
+    }, retryAttempt);
   }
 
 }
