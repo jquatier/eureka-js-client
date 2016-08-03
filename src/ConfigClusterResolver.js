@@ -1,9 +1,12 @@
 import Logger from './Logger';
 
+/*
+  Locates a Eureka host using static configuration. Configuration can either be
+  done using a simple host and port, or a map of serviceUrls.
+ */
 export default class ConfigClusterResolver {
   constructor(config, logger) {
     this.logger = logger || new Logger();
-    this.serviceUrls = undefined;
     this.config = config;
     this.serviceUrls = this.buildServiceUrls();
   }
@@ -17,26 +20,26 @@ export default class ConfigClusterResolver {
 
   buildServiceUrls() {
     const { host, port, servicePath, ssl,
-      serviceUrl, preferSameZone } = this.config.eureka;
+      serviceUrls, preferSameZone } = this.config.eureka;
     const { metadata } = this.config.instance.dataCenterInfo;
     const instanceZone = metadata ? metadata['availability-zone'] : undefined;
-    const serviceUrls = [];
+    const urls = [];
     const zones = this.getAvailabilityZones();
-    if (serviceUrl) {
+    if (serviceUrls) {
       zones.forEach((zone) => {
-        if (serviceUrl[zone]) {
+        if (serviceUrls[zone]) {
           if (preferSameZone && instanceZone && instanceZone === zone) {
-            serviceUrls.unshift(...serviceUrl[zone]);
+            urls.unshift(...serviceUrls[zone]);
           }
-          serviceUrls.push(...serviceUrl[zone]);
+          urls.push(...serviceUrls[zone]);
         }
       });
     }
-    if (!serviceUrls.length) {
+    if (!urls.length) {
       const protocol = ssl ? 'https' : 'http';
-      serviceUrls.push(`${protocol}://${host}:${port}${servicePath}`);
+      urls.push(`${protocol}://${host}:${port}${servicePath}`);
     }
-    return serviceUrls;
+    return urls;
   }
 
   getAvailabilityZones() {

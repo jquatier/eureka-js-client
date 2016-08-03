@@ -8,6 +8,7 @@ import { join } from 'path';
 import merge from 'lodash/merge';
 
 import Eureka from '../src/EurekaClient';
+import DnsClusterResolver from '../src/DnsClusterResolver';
 
 chai.use(sinonChai);
 
@@ -81,6 +82,47 @@ describe('Eureka client', () => {
       expect(shouldThrow).to.throw();
       expect(noApp).to.throw(/app/);
       expect(shouldWork).to.not.throw();
+    });
+
+    it('should use DnsClusterResolver when configured', () => {
+      const client = new Eureka({
+        instance: {
+          app: true,
+          vipAddress: true,
+          port: true,
+          dataCenterInfo: {
+            name: 'MyOwn',
+          },
+        },
+        eureka: {
+          host: true,
+          port: true,
+          useDns: true,
+          ec2Region: 'my-region',
+        },
+      });
+      expect(client.clusterResolver.constructor).to.equal(DnsClusterResolver);
+    });
+
+    it('should throw when configured to useDns without setting ec2Region', () => {
+      function shouldThrow() {
+        return new Eureka({
+          instance: {
+            app: true,
+            vipAddress: true,
+            port: true,
+            dataCenterInfo: {
+              name: 'MyOwn',
+            },
+          },
+          eureka: {
+            host: true,
+            port: true,
+            useDns: true,
+          },
+        });
+      }
+      expect(shouldThrow).to.throw(/ec2Region/);
     });
   });
 

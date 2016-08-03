@@ -43,14 +43,14 @@ describe('DNS Cluster Resolver', () => {
 
   describe('startClusterRefresh()', () => {
     let dnsResolver;
-    let refreshSpy;
+    let refreshStub;
     let clock;
-    before(() => {
+    beforeEach(() => {
       clock = sinon.useFakeTimers();
     });
 
-    after(() => {
-      refreshSpy.restore();
+    afterEach(() => {
+      dnsResolver.refreshCurrentCluster.restore();
       clock.restore();
     });
 
@@ -58,12 +58,24 @@ describe('DNS Cluster Resolver', () => {
       dnsResolver = new DnsClusterResolver(makeConfig({
         eureka: { clusterRefreshInterval: 300000 },
       }));
-      refreshSpy = sinon.stub(dnsResolver, 'refreshCurrentCluster');
+      refreshStub = sinon.stub(dnsResolver, 'refreshCurrentCluster');
       clock.tick(300000);
-      expect(refreshSpy).to.have.been.calledOnce;
+      expect(refreshStub).to.have.been.calledOnce;
       clock.tick(300000);
-      expect(refreshSpy).to.have.been.calledTwice;
-      refreshSpy.restore();
+      expect(refreshStub).to.have.been.calledTwice;
+      clock.restore();
+    });
+
+    it('should log warning on refresh failure', () => {
+      dnsResolver = new DnsClusterResolver(makeConfig({
+        eureka: { clusterRefreshInterval: 300000 },
+      }));
+      refreshStub = sinon.stub(dnsResolver, 'refreshCurrentCluster');
+      refreshStub.yields(new Error('fail'));
+      clock.tick(300000);
+      expect(refreshStub).to.have.been.calledOnce;
+      clock.tick(300000);
+      expect(refreshStub).to.have.been.calledTwice;
       clock.restore();
     });
   });
@@ -267,6 +279,21 @@ describe('DNS Cluster Resolver', () => {
       expect(shouldNotThrow).to.not.throw();
       expect(resolveCb).to.have.been.calledWithMatch({
         message: 'Error resolving cluster zone txt.1b.eureka.mydomain.com: [Error: dns error]',
+      });
+    });
+
+    it('should return error when no hosts were found', (done) => {
+      const dnsResolver = new DnsClusterResolver(makeConfig());
+      const resolveStub = sinon.stub(dns, 'resolveTxt');
+      resolveStub.withArgs('txt.my-region.eureka.mydomain.com').yields(null, [eurekaHosts]);
+      resolveStub.withArgs('txt.1a.eureka.mydomain.com').yields(null, []);
+      resolveStub.withArgs('txt.1b.eureka.mydomain.com').yields(null, []);
+      resolveStub.withArgs('txt.1c.eureka.mydomain.com').yields(null, []);
+      dnsResolver.resolveClusterHosts((err) => {
+        expect(err).to.not.equal(undefined);
+        expect(err.message).to.equal('Unable to locate any Eureka hosts in any ' +
+          'zone via DNS @ txt.my-region.eureka.mydomain.com');
+        done();
       });
     });
   });
