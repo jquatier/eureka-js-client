@@ -56,7 +56,7 @@ export default class DnsClusterResolver {
   startClusterRefresh() {
     const refreshTimer = setInterval(() => {
       this.refreshCurrentCluster((err) => {
-        if (err) this.logger.warn(err);
+        if (err) this.logger.warn(err.message);
       });
     }, this.config.eureka.clusterRefreshInterval);
     refreshTimer.unref();
@@ -121,7 +121,7 @@ export default class DnsClusterResolver {
   resolveZoneHosts(zoneRecord, callback) {
     dns.resolveTxt(zoneRecord, (err, results) => {
       if (err) {
-        this.logger.warn(`Failed to resolve cluster zone ${zoneRecord}`, err);
+        this.logger.warn(`Failed to resolve cluster zone ${zoneRecord}`, err.message);
         return callback(new Error(`Error resolving cluster zone ${zoneRecord}: [${err}]`));
       }
       this.logger.debug(`Found Eureka Servers @ ${zoneRecord}`, results);

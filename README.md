@@ -3,6 +3,8 @@
 
 A JavaScript implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.
 
+![](./img/eureka-js-client.jpg)
+
 ## Usage
 
 First, install the module into your node project:
