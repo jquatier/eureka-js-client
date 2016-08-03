@@ -8,10 +8,11 @@ export default class ConfigClusterResolver {
     this.serviceUrls = this.buildServiceUrls();
   }
 
-  resolveEurekaUrl(callback) {
-    const { host, port, servicePath, ssl } = this.config.eureka;
-    const protocol = ssl ? 'https' : 'http';
-    callback(null, `${protocol}://${host}:${port}${servicePath}`);
+  resolveEurekaUrl(callback, retryAttempt = 0) {
+    if (this.serviceUrls.length > 1 && retryAttempt > 0) {
+      this.serviceUrls.push(this.serviceUrls.shift());
+    }
+    callback(null, this.serviceUrls[0]);
   }
 
   buildServiceUrls() {
