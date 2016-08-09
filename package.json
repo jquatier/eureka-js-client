@@ -1,6 +1,6 @@
 {
   "name": "eureka-js-client",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "A JavaScript implementation the Netflix OSS service registry, Eureka.",
   "main": "lib/index.js",
   "scripts": {
@@ -51,6 +51,11 @@
     "sinon-chai": "^2.8.0"
   },
   "greenkeeper": {
-    "ignore": ["eslint", "eslint-config-airbnb-base", "eslint-plugin-import", "gulp-eslint"]
+    "ignore": [
+      "eslint",
+      "eslint-config-airbnb-base",
+      "eslint-plugin-import",
+      "gulp-eslint"
+    ]
   }
 }
