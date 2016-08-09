@@ -614,7 +614,7 @@ describe('Eureka client', () => {
       const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
-      expect(registryCb).to.have.been.calledWithMatch({ message: 'Unexpected token b' });
+      expect(registryCb).to.have.been.calledWith(new SyntaxError());
     });
   });
 
