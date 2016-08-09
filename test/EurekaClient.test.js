@@ -608,6 +608,14 @@ describe('Eureka client', () => {
 
       expect(registryCb).to.have.been.calledWithMatch({ message: 'request error' });
     });
+
+    it('should throw error on invalid JSON', () => {
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, '{ blah');
+      const registryCb = sinon.spy();
+      client.fetchRegistry(registryCb);
+
+      expect(registryCb).to.have.been.calledWith(new SyntaxError());
+    });
   });
 
   describe('transformRegistry()', () => {
