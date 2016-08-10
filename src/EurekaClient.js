@@ -319,7 +319,11 @@ export default class Eureka extends EventEmitter {
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
         this.logger.debug('retrieved registry successfully');
-        this.transformRegistry(JSON.parse(body));
+        try {
+          this.transformRegistry(JSON.parse(body));
+        } catch (ex) {
+          return callback(ex);
+        }
         this.emit('registryUpdated');
         return callback(null);
       } else if (error) {
