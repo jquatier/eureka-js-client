@@ -14,9 +14,6 @@ function makeConfig(overrides = {}) {
       dataCenterInfo: { metadata: { 'availability-zone': '1b' } },
     },
     eureka: {
-      host: 'eureka.mydomain.com',
-      servicePath: '/eureka/v2/apps/',
-      port: 9999,
       maxRetries: 0,
       ec2Region: 'my-region',
     },
@@ -28,7 +25,13 @@ describe('Config Cluster Resolver', () => {
   describe('resolveEurekaUrl() with host/port config', () => {
     let resolver;
     beforeEach(() => {
-      resolver = new ConfigClusterResolver(makeConfig());
+      resolver = new ConfigClusterResolver(makeConfig({
+        eureka: {
+          host: 'eureka.mydomain.com',
+          servicePath: '/eureka/v2/apps/',
+          port: 9999,
+        },
+      }));
     });
 
     it('should return base Eureka URL using configured host', () => {

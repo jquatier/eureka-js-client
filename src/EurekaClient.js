@@ -171,8 +171,6 @@ export default class Eureka extends EventEmitter {
     validate('instance', 'vipAddress');
     validate('instance', 'port');
     validate('instance', 'dataCenterInfo');
-    validate('eureka', 'host');
-    validate('eureka', 'port');
   }
 
   /*
