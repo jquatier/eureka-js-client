@@ -125,7 +125,51 @@ If your have multiple availability zones and your DNS entries set up according t
 
 This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above. This feature will also work in non-EC2 environments as long as the DNS records conform to the same convention.
 
-## Configuration Options
+### Statically configuring Eureka server list
+While the recommended approach for resolving the Eureka cluster is using DNS (see above), you can also statically configure the list of Eureka servers by zone or just using a simple default list. Make sure to provide the full protocol, host, port, and path to the Eureka REST service when using this approach.
+
+#### Static cluster configuration (map by zone)
+
+```javascript
+// example configuration for AWS (static map of Eureka cluster by availability-zone)
+const client = new Eureka({
+  instance: {
+    ... // application instance information
+  },
+  eureka: {
+    availabilityZones: {
+      'us-east-1': ['us-east-1c', 'us-east-1d', 'us-east-1e']
+    },
+    serviceUrls: {
+      'us-east-1c': [
+        'http://ec2-fake-552-627-568-165.compute-1.amazonaws.com:7001/eureka/v2/', 'http://ec2-fake-368-101-182-134.compute-1.amazonaws.com:7001/eureka/v2/'
+      ],
+      'us-east-1d': [...],
+      'us-east-1e': [...]
+    }
+  },
+});
+```
+
+#### Static cluster configuration (list)
+
+```javascript
+// example configuration (static list of Eureka cluster servers)
+const client = new Eureka({
+  instance: {
+    ... // application instance information
+  },
+  eureka: {
+    serviceUrls: {
+      default: [
+        'http://ec2-fake-552-627-568-165.compute-1.amazonaws.com:7001/eureka/v2/', 'http://ec2-fake-368-101-182-134.compute-1.amazonaws.com:7001/eureka/v2/'
+      ]
+    }
+  },
+});
+```
+
+## Advanced Configuration Options
 option | default value | description
 ---- | --- | ---
 `logger` | console logging | logger implementation for the client to use

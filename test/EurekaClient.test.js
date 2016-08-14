@@ -528,22 +528,6 @@ describe('Eureka client', () => {
       }
       expect(badConfig).to.throw(TypeError);
     });
-
-    it('should throw an exception with a missing eureka.host', () => {
-      function badConfig() {
-        delete config.eureka.host;
-        return new Eureka(config);
-      }
-      expect(badConfig).to.throw(TypeError);
-    });
-
-    it('should throw an exception with a missing eureka.port', () => {
-      function badConfig() {
-        delete config.eureka.port;
-        return new Eureka(config);
-      }
-      expect(badConfig).to.throw(TypeError);
-    });
   });
 
   describe('getInstancesByAppId()', () => {
