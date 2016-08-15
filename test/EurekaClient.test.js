@@ -883,5 +883,30 @@ describe('Eureka client', () => {
         expect(error.message).to.equal('requestMiddleware did not return an object');
       });
     });
+
+    it('should retry next server on request failure', (done) => {
+      const overrides = {
+        eureka: {
+          serviceUrls: {
+            default: ['http://serverA', 'http://serverB'],
+          },
+          maxRetries: 3,
+          requestRetryDelay: 0,
+        },
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      const requestStub = sinon.stub(request, 'get');
+      requestStub.onCall(0).yields(null, { statusCode: 500 }, null);
+      requestStub.onCall(1).yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({ uri: '/path' }, (error) => {
+        expect(error).to.be.null;
+        expect(requestStub).to.be.calledTwice;
+        expect(requestStub.args[0][0]).to.have.property('baseUrl', 'http://serverA');
+        expect(requestStub.args[1][0]).to.have.property('baseUrl', 'http://serverB');
+        done();
+      });
+    });
+
   });
 });

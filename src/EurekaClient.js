@@ -437,10 +437,10 @@ export default class Eureka extends EventEmitter {
       done => {
         this.clusterResolver.resolveEurekaUrl((err, eurekaUrl) => {
           if (err) return done(err);
-          const requestOpts = merge({
+          const requestOpts = merge({}, opts, {
             baseUrl: eurekaUrl,
             gzip: true,
-          }, opts);
+          });
           done(null, requestOpts);
         }, retryAttempt);
       },
@@ -466,7 +466,7 @@ export default class Eureka extends EventEmitter {
       },
     ],
     /*
-    Handle Final Output
+    Handle Final Output.
      */
     (error, response, body, requestOpts) => {
       if (error) this.logger.error('Problem making eureka request', error);
@@ -481,7 +481,7 @@ export default class Eureka extends EventEmitter {
         this.logger.warn(`Eureka request failed to endpoint ${requestOpts.baseUrl}, ` +
           `next server retry in ${nextRetryDelay}ms`);
 
-        setTimeout(() => this.eurekaRequest(requestOpts, callback, retryAttempt + 1),
+        setTimeout(() => this.eurekaRequest(opts, callback, retryAttempt + 1),
           nextRetryDelay);
         return;
       }
