@@ -76,9 +76,9 @@ export default class Eureka extends EventEmitter {
     }
 
     if (this.config.eureka.useDns) {
-      this.clusterResolver = new DnsClusterResolver(this.config);
+      this.clusterResolver = new DnsClusterResolver(this.config, this.logger);
     } else {
-      this.clusterResolver = new ConfigClusterResolver(this.config);
+      this.clusterResolver = new ConfigClusterResolver(this.config, this.logger);
     }
 
     this.cache = {

@@ -68,10 +68,10 @@ export default class DnsClusterResolver {
       // if the cluster is the same (aside from order), we want to maintain our order
       if (xor(this.serverList, hosts).length) {
         this.serverList = hosts;
-        this.logger.info('Updated Eureka cluster found, hosts will be used in the following order',
+        this.logger.info('Eureka cluster located, hosts will be used in the following order',
           this.serverList);
       } else {
-        this.logger.info('Eureka cluster hosts unchanged, maintaining current server list.');
+        this.logger.debug('Eureka cluster hosts unchanged, maintaining current server list.');
       }
       callback();
     });
@@ -111,8 +111,6 @@ export default class DnsClusterResolver {
           return callback(
             new Error(`Unable to locate any Eureka hosts in any zone via DNS @ ${dnsHost}`));
         }
-        this.logger.info('Eureka cluster found, hosts will be used in the following order',
-          combinedHosts);
         callback(null, combinedHosts);
       });
     });

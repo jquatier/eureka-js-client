@@ -907,6 +907,5 @@ describe('Eureka client', () => {
         done();
       });
     });
-
   });
 });
