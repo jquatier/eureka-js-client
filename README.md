@@ -89,6 +89,22 @@ const appInfo = client.getInstancesByAppId('YOURSERVICE');
 const appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
+### Providing Custom Request Middleware
+The client exposes the ability to modify the outgoing [request](https://www.npmjs.com/package/request) options object prior to a eureka call.
+
+```javascript
+// example using middleware to set-up HTTP authentication
+const client = new Eureka({
+  requestMiddleware: (requestOpts) => {
+    requestOpts.auth = {
+      user: 'username',
+      password: 'somepassword'
+    };
+    return requestOpts;
+  }
+});
+```
+
 ## Configuring for AWS environments
 
 For AWS environments (`dataCenterInfo.name == 'Amazon'`) the client has built-in logic to request the AWS metadata that the Eureka server requires. See [Eureka REST schema](https://github.com/Netflix/eureka/wiki/Eureka-REST-operations) for more information.
@@ -172,6 +188,7 @@ const client = new Eureka({
 ## Advanced Configuration Options
 option | default value | description
 ---- | --- | ---
+`requestMiddleware` | undefined | Custom middleware function to modify the outgoing [request](https://www.npmjs.com/package/request) to eureka
 `logger` | console logging | logger implementation for the client to use
 `eureka.heartbeatInterval` | `30000` | milliseconds to wait between heartbeats
 `eureka.registryFetchInterval` | `30000` | milliseconds to wait between registry fetches
