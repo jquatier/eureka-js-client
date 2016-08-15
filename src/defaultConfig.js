@@ -1,6 +1,6 @@
 // Default configuration values:
 export default {
-  requestMiddleware: undefined,
+  requestMiddleware: (request, done) => done(request),
   eureka: {
     heartbeatInterval: 30000,
     registryFetchInterval: 30000,
