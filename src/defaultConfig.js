@@ -5,6 +5,7 @@ export default {
     heartbeatInterval: 30000,
     registryFetchInterval: 30000,
     maxRetries: 3,
+    requestRetryDelay: 500,
     fetchRegistry: true,
     filterUpInstances: true,
     servicePath: '/eureka/v2/apps/',
