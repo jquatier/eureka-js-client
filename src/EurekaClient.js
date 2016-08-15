@@ -51,6 +51,10 @@ export default class Eureka extends EventEmitter {
 
     this.logger.debug('initializing eureka client');
 
+    if (typeof config.requestMiddleware === 'function') {
+      this.requestMiddleware = config.requestMiddleware;
+    }
+
     // Load up the current working directory and the environment:
     const cwd = config.cwd || process.cwd();
     const env = process.env.NODE_ENV || 'development';
@@ -426,10 +430,22 @@ export default class Eureka extends EventEmitter {
   eurekaRequest(opts, callback, retryAttempt = 0) {
     this.clusterResolver.resolveEurekaUrl((err, eurekaUrl) => {
       if (err) return callback(err);
-      const requestOpts = merge({
+      let requestOpts = merge({
         baseUrl: eurekaUrl,
         gzip: true,
       }, opts);
+
+      if (this.requestMiddleware) {
+        try {
+          requestOpts = this.requestMiddleware(requestOpts);
+        } catch (error) {
+          return callback(error);
+        }
+        if (typeof requestOpts !== 'object') {
+          return callback(new Error('requestMiddleware did not return an object'));
+        }
+      }
+
       request[requestOpts.method ? requestOpts.method.toLowerCase() : 'get'](requestOpts,
         (error, response, body) => {
           if ((error ||

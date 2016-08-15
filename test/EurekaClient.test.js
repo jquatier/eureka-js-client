@@ -124,6 +124,28 @@ describe('Eureka client', () => {
       }
       expect(shouldThrow).to.throw(/ec2Region/);
     });
+
+    it('should accept requestMiddleware', () => {
+      const requestMiddleware = (opts) => opts;
+      const client = new Eureka({
+        requestMiddleware,
+        instance: {
+          app: true,
+          vipAddress: true,
+          port: true,
+          dataCenterInfo: {
+            name: 'MyOwn',
+          },
+        },
+        eureka: {
+          host: true,
+          port: true,
+          useDns: true,
+          ec2Region: 'my-region',
+        },
+      });
+      expect(client.requestMiddleware).to.equal(requestMiddleware);
+    });
   });
 
   describe('get instanceId()', () => {
@@ -816,6 +838,50 @@ describe('Eureka client', () => {
   });
 
   describe('eurekaRequest()', () => {
-    // code goes here for retries, etc.
+    beforeEach(() => {});
+
+    afterEach(() => {
+      if (request.get.restore) request.get.restore();
+    });
+
+    it('should call requestMiddleware with request options', () => {
+      const overrides = {
+        requestMiddleware: sinon.spy(opts => opts),
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({}, (error) => {
+        expect(Boolean(error)).to.equal(false);
+        expect(overrides.requestMiddleware).to.be.calledOnce;
+        expect(overrides.requestMiddleware.args[0][0]).to.be.an('object');
+      });
+    });
+    it('should catch an error in requestMiddleware', () => {
+      const overrides = {
+        requestMiddleware: sinon.spy(() => {
+          throw new Error();
+        }),
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({}, (error) => {
+        expect(overrides.requestMiddleware).to.be.calledOnce;
+        expect(error).to.be.an('error');
+      });
+    });
+    it('should check the returnType of requestMiddleware', () => {
+      const overrides = {
+        requestMiddleware: sinon.spy(() => 'foo'),
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({}, (error) => {
+        expect(error).to.be.an('error');
+        expect(error.message).to.equal('requestMiddleware did not return an object');
+      });
+    });
   });
 });
