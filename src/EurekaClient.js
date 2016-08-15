@@ -3,7 +3,7 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import merge from 'lodash/merge';
 import path from 'path';
-import { series } from 'async';
+import { series, waterfall } from 'async';
 import { EventEmitter } from 'events';
 
 import AwsMetadata from './AwsMetadata';
@@ -67,7 +67,7 @@ export default class Eureka extends EventEmitter {
     // Validate the provided the values we need:
     this.validateConfig(this.config);
 
-    this.requestMiddleware = config.requestMiddleware;
+    this.requestMiddleware = this.config.requestMiddleware;
 
     if (this.amazonDataCenter) {
       this.metadataClient = new AwsMetadata({
@@ -430,36 +430,64 @@ export default class Eureka extends EventEmitter {
     the current cluster as well as some default options.
   */
   eurekaRequest(opts, callback, retryAttempt = 0) {
-    this.clusterResolver.resolveEurekaUrl((err, eurekaUrl) => {
-      if (err) return callback(err);
-      let requestOpts = merge({
-        baseUrl: eurekaUrl,
-        gzip: true,
-      }, opts);
+    waterfall([
+      /*
+      Resolve Eureka Clusters
+      */
+      done => {
+        this.clusterResolver.resolveEurekaUrl((err, eurekaUrl) => {
+          if (err) return done(err);
+          const requestOpts = merge({
+            baseUrl: eurekaUrl,
+            gzip: true,
+          }, opts);
+          done(null, requestOpts);
+        }, retryAttempt);
+      },
+      /*
+      Apply Request Middleware
+      */
+      (requestOpts, done) => {
+        this.requestMiddleware(requestOpts, (newRequestOpts) => {
+          if (typeof newRequestOpts !== 'object') {
+            return done(new Error('requestMiddleware did not return an object'));
+          }
+          done(null, newRequestOpts);
+        });
+      },
+      /*
+      Perform Request
+       */
+      (requestOpts, done) => {
+        const method = requestOpts.method ? requestOpts.method.toLowerCase() : 'get';
+        request[method](requestOpts, (error, response, body) => {
+          done(error, response, body, requestOpts);
+        });
+      },
+    ],
+    /*
+    Handle Final Output
+     */
+    (error, response, body, requestOpts) => {
+      if (error) this.logger.error('Problem making eureka request', error);
 
-      if (this.requestMiddleware) {
-        try {
-          requestOpts = this.requestMiddleware(requestOpts);
-        } catch (error) {
-          return callback(error);
-        }
-        if (typeof requestOpts !== 'object') {
-          return callback(new Error('requestMiddleware did not return an object'));
-        }
+      // Perform retry if request failed and we have attempts left
+      const responseInvalid = response
+        && response.statusCode
+        && String(response.statusCode).startsWith('5');
+
+      if ((error || responseInvalid) && retryAttempt < this.config.eureka.maxRetries) {
+        const nextRetryDelay = this.config.eureka.requestRetryDelay * (retryAttempt + 1);
+        this.logger.warn(`Eureka request failed to endpoint ${requestOpts.baseUrl}, ` +
+          `next server retry in ${nextRetryDelay}ms`);
+
+        setTimeout(() => this.eurekaRequest(requestOpts, callback, retryAttempt + 1),
+          nextRetryDelay);
+        return;
       }
 
-      request[requestOpts.method ? requestOpts.method.toLowerCase() : 'get'](requestOpts,
-        (error, response, body) => {
-          if ((error ||
-              (response && response.statusCode && String(response.statusCode)[0] === '5')) &&
-            retryAttempt < this.config.eureka.maxRetries) {
-            setTimeout(() => this.eurekaRequest(opts, callback, retryAttempt + 1),
-              500 * (retryAttempt + 1));
-            return;
-          }
-          callback(error, response, body);
-        });
-    }, retryAttempt);
+      callback(error, response, body);
+    });
   }
 
 }

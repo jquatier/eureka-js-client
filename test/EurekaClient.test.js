@@ -846,7 +846,7 @@ describe('Eureka client', () => {
 
     it('should call requestMiddleware with request options', () => {
       const overrides = {
-        requestMiddleware: sinon.spy(opts => opts),
+        requestMiddleware: sinon.spy((opts, done) => done(opts)),
       };
       const config = makeConfig(overrides);
       const client = new Eureka(config);
@@ -859,8 +859,8 @@ describe('Eureka client', () => {
     });
     it('should catch an error in requestMiddleware', () => {
       const overrides = {
-        requestMiddleware: sinon.spy(() => {
-          throw new Error();
+        requestMiddleware: sinon.spy((opts, done) => {
+          done();
         }),
       };
       const config = makeConfig(overrides);
@@ -873,7 +873,7 @@ describe('Eureka client', () => {
     });
     it('should check the returnType of requestMiddleware', () => {
       const overrides = {
-        requestMiddleware: sinon.spy(() => 'foo'),
+        requestMiddleware: sinon.spy((opts, done) => done('foo')),
       };
       const config = makeConfig(overrides);
       const client = new Eureka(config);
