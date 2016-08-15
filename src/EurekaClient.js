@@ -51,10 +51,6 @@ export default class Eureka extends EventEmitter {
 
     this.logger.debug('initializing eureka client');
 
-    if (typeof config.requestMiddleware === 'function') {
-      this.requestMiddleware = config.requestMiddleware;
-    }
-
     // Load up the current working directory and the environment:
     const cwd = config.cwd || process.cwd();
     const env = process.env.NODE_ENV || 'development';
@@ -70,6 +66,8 @@ export default class Eureka extends EventEmitter {
 
     // Validate the provided the values we need:
     this.validateConfig(this.config);
+
+    this.requestMiddleware = config.requestMiddleware;
 
     if (this.amazonDataCenter) {
       this.metadataClient = new AwsMetadata({
@@ -175,6 +173,10 @@ export default class Eureka extends EventEmitter {
     validate('instance', 'vipAddress');
     validate('instance', 'port');
     validate('instance', 'dataCenterInfo');
+
+    if (typeof config.requestMiddleware !== 'function') {
+      throw new TypeError('requestMiddleware must be a function');
+    }
   }
 
   /*
