@@ -139,7 +139,10 @@ Notes:
 ### Looking up Eureka Servers using DNS
 If your have multiple availability zones and your DNS entries set up according to the Wiki article [Deploying Eureka Servers in EC2](https://github.com/Netflix/eureka/wiki/Deploying-Eureka-Servers-in-EC2#configuring-eips-using-dns), you'll want to set `config.eureka.useDns` to `true` and set `config.eureka.ec2Region` to the current region (usually this can be pulled into your application via an environment variable, or passed in directly at startup).
 
-This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above. This feature will also work in non-EC2 environments as long as the DNS records conform to the same convention.
+This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above. This feature will also work in non-EC2 environments as long as the DNS records conform to the same convention. The results of the DNS resolution are cached in memory and refreshed every 5 minutes by default (set `config.eureka.clusterRefreshInterval` to override).
+
+##### Zone Affinity
+By default, the client will first try to connect to the Eureka server located in the same availability-zone as it's currently in. If `availability-zone` is not set in the instance metadata, a random server will be chosen. This also applies when statically configuring the cluster (mapped by zone, see below). To disable this feature, set `config.eureka.preferSameZone` to `false`, and a random server will be chosen.
 
 ### Statically configuring Eureka server list
 While the recommended approach for resolving the Eureka cluster is using DNS (see above), you can also statically configure the list of Eureka servers by zone or just using a simple default list. Make sure to provide the full protocol, host, port, and path to the Eureka REST service (usually `/apps/`) when using this approach.
@@ -199,6 +202,8 @@ option | default value | description
 `eureka.servicePath` | `/eureka/v2/apps/` | path to eureka REST service
 `eureka.ssl` | `false` | enable SSL communication with Eureka server
 `eureka.useDns` | `false` | look up Eureka server using DNS, see [Looking up Eureka Servers in AWS using DNS](#looking-up-eureka-servers-in-aws-using-dns)
+`eureka.preferSameZone` | `true` | enable/disable zone affinity when locating a Eureka server
+`eureka.clusterRefreshInterval` | `300000` | milliseconds to wait between refreshing cluster hosts (DNS resolution only)
 `eureka.fetchMetadata` | `true` | fetch AWS metadata when in AWS environment, see [Configuring for AWS environments](#configuring-for-aws-environments)
 `eureka.useLocalMetadata` | `false` | use local IP and local hostname from metadata when in an AWS environment.
 
