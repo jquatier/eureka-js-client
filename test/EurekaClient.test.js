@@ -4,11 +4,11 @@ import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
 import request from 'request';
 import { EventEmitter } from 'events';
-import dns from 'dns';
 import { join } from 'path';
 import merge from 'lodash/merge';
 
 import Eureka from '../src/EurekaClient';
+import DnsClusterResolver from '../src/DnsClusterResolver';
 
 chai.use(sinonChai);
 
@@ -23,7 +23,7 @@ function makeConfig(overrides = {}) {
         name: 'MyOwn',
       },
     },
-    eureka: { host: '127.0.0.1', port: 9999 },
+    eureka: { host: '127.0.0.1', port: 9999, maxRetries: 0 },
   };
   return merge({}, config, overrides);
 }
@@ -82,6 +82,69 @@ describe('Eureka client', () => {
       expect(shouldThrow).to.throw();
       expect(noApp).to.throw(/app/);
       expect(shouldWork).to.not.throw();
+    });
+
+    it('should use DnsClusterResolver when configured', () => {
+      const client = new Eureka({
+        instance: {
+          app: true,
+          vipAddress: true,
+          port: true,
+          dataCenterInfo: {
+            name: 'MyOwn',
+          },
+        },
+        eureka: {
+          host: true,
+          port: true,
+          useDns: true,
+          ec2Region: 'my-region',
+        },
+      });
+      expect(client.clusterResolver.constructor).to.equal(DnsClusterResolver);
+    });
+
+    it('should throw when configured to useDns without setting ec2Region', () => {
+      function shouldThrow() {
+        return new Eureka({
+          instance: {
+            app: true,
+            vipAddress: true,
+            port: true,
+            dataCenterInfo: {
+              name: 'MyOwn',
+            },
+          },
+          eureka: {
+            host: true,
+            port: true,
+            useDns: true,
+          },
+        });
+      }
+      expect(shouldThrow).to.throw(/ec2Region/);
+    });
+
+    it('should accept requestMiddleware', () => {
+      const requestMiddleware = (opts) => opts;
+      const client = new Eureka({
+        requestMiddleware,
+        instance: {
+          app: true,
+          vipAddress: true,
+          port: true,
+          dataCenterInfo: {
+            name: 'MyOwn',
+          },
+        },
+        eureka: {
+          host: true,
+          port: true,
+          useDns: true,
+          ec2Region: 'my-region',
+        },
+      });
+      expect(client.requestMiddleware).to.equal(requestMiddleware);
     });
   });
 
@@ -262,7 +325,8 @@ describe('Eureka client', () => {
           },
         },
         json: true,
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app',
       });
 
       expect(registerCb).to.have.been.calledWithMatch(null);
@@ -296,11 +360,11 @@ describe('Eureka client', () => {
     });
 
     afterEach(() => {
-      request.del.restore();
+      request.delete.restore();
     });
 
     it('should should trigger deregister event', () => {
-      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      sinon.stub(request, 'delete').yields(null, { statusCode: 200 }, null);
       const eventSpy = sinon.spy();
       client.on('deregistered', eventSpy);
       client.register();
@@ -308,19 +372,20 @@ describe('Eureka client', () => {
     });
 
     it('should call deregister URI', () => {
-      sinon.stub(request, 'del').yields(null, { statusCode: 200 }, null);
+      sinon.stub(request, 'delete').yields(null, { statusCode: 200 }, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
-      expect(request.del).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+      expect(request.delete).to.have.been.calledWithMatch({
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app/myhost',
       });
 
       expect(deregisterCb).to.have.been.calledWithMatch(null);
     });
 
     it('should throw error for non-200 response', () => {
-      sinon.stub(request, 'del').yields(null, { statusCode: 500 }, null);
+      sinon.stub(request, 'delete').yields(null, { statusCode: 500 }, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
@@ -330,7 +395,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for request error', () => {
-      sinon.stub(request, 'del').yields(new Error('request error'), null, null);
+      sinon.stub(request, 'delete').yields(new Error('request error'), null, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
@@ -355,7 +420,8 @@ describe('Eureka client', () => {
       client.renew();
 
       expect(request.put).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app/myhost',
       });
     });
 
@@ -374,7 +440,8 @@ describe('Eureka client', () => {
       client.renew();
 
       expect(request.put).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app/myhost',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app/myhost',
       });
 
       expect(request.post).to.have.been.calledWithMatch({
@@ -389,7 +456,8 @@ describe('Eureka client', () => {
           },
         },
         json: true,
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/app',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'app',
       });
     });
   });
@@ -482,22 +550,6 @@ describe('Eureka client', () => {
       }
       expect(badConfig).to.throw(TypeError);
     });
-
-    it('should throw an exception with a missing eureka.host', () => {
-      function badConfig() {
-        delete config.eureka.host;
-        return new Eureka(config);
-      }
-      expect(badConfig).to.throw(TypeError);
-    });
-
-    it('should throw an exception with a missing eureka.port', () => {
-      function badConfig() {
-        delete config.eureka.port;
-        return new Eureka(config);
-      }
-      expect(badConfig).to.throw(TypeError);
-    });
   });
 
   describe('getInstancesByAppId()', () => {
@@ -523,8 +575,8 @@ describe('Eureka client', () => {
       expect(actualInstances).to.equal(expectedInstances);
     });
 
-    it('should return undefined no instances were found for given appId', () => {
-      expect(client.getInstancesByAppId('THESERVICENAME')).to.equal(undefined);
+    it('should return empty array if no instances were found for given appId', () => {
+      expect(client.getInstancesByAppId('THESERVICENAME')).to.deep.equal([]);
     });
   });
 
@@ -551,8 +603,8 @@ describe('Eureka client', () => {
       expect(actualInstances).to.equal(expectedInstances);
     });
 
-    it('should return undefined no instances were found for given vipAddress', () => {
-      expect(client.getInstancesByVipAddress('the.vip.address')).to.equal(undefined);
+    it('should return empty array if no instances were found for given vipAddress', () => {
+      expect(client.getInstancesByVipAddress('the.vip.address')).to.deep.equal([]);
     });
   });
 
@@ -584,7 +636,8 @@ describe('Eureka client', () => {
       client.fetchRegistry(registryCb);
 
       expect(request.get).to.have.been.calledWithMatch({
-        url: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: '',
         headers: { Accept: 'application/json' },
       });
 
@@ -783,112 +836,75 @@ describe('Eureka client', () => {
       expect(client.config.instance.healthCheckUrl).to.equal('http://fake-1:8077/healthcheck');
     });
   });
-  describe('buildEurekaUrl()', () => {
-    let config;
-    let client;
+
+  describe('eurekaRequest()', () => {
+    beforeEach(() => {});
 
     afterEach(() => {
-      dns.resolveTxt.restore();
+      if (request.get.restore) request.get.restore();
     });
 
-    it('should pass error when lookupCurrentEurekaHost passes error', () => {
-      config = makeConfig();
-      client = new Eureka(config);
-
-      sinon.stub(dns, 'resolveTxt').yields(null, []);
-      sinon.stub(client, 'lookupCurrentEurekaHost').yields(new Error());
-      const spy = sinon.spy();
-      client.buildEurekaUrl(spy);
-      expect(spy.args[0][0]).to.be.instanceof(Error);
-    });
-  });
-
-  describe('locateEurekaHostUsingDns()', () => {
-    let config;
-    let client;
-    const eurekaHosts = [
-      '1a.eureka.mydomain.com',
-      '1b.eureka.mydomain.com',
-      '1c.eureka.mydomain.com',
-    ];
-
-    afterEach(() => {
-      dns.resolveTxt.restore();
-    });
-
-    it('should pass error when ec2Region is undefined', () => {
-      config = makeConfig();
-      client = new Eureka(config);
-
-      sinon.stub(dns, 'resolveTxt').yields(null, []);
-      const spy = sinon.spy();
-      client.locateEurekaHostUsingDns(spy);
-      expect(spy.args[0][0]).to.be.instanceof(Error);
-    });
-
-    it('should lookup server list using DNS', () => {
-      config = makeConfig({
-        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
+    it('should call requestMiddleware with request options', () => {
+      const overrides = {
+        requestMiddleware: sinon.spy((opts, done) => done(opts)),
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({}, (error) => {
+        expect(Boolean(error)).to.equal(false);
+        expect(overrides.requestMiddleware).to.be.calledOnce;
+        expect(overrides.requestMiddleware.args[0][0]).to.be.an('object');
       });
-      client = new Eureka(config);
-
-      const locateCb = sinon.spy();
-      const resolveStub = sinon.stub(dns, 'resolveTxt');
-      resolveStub.onCall(0).yields(null, [eurekaHosts]);
-      resolveStub.onCall(1).yields(null, [['1.2.3.4']]);
-      client.locateEurekaHostUsingDns(locateCb);
-
-      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
-      expect(dns.resolveTxt).to.have.been.calledWith(
-        sinon.match(value => eurekaHosts.indexOf(value))
-      );
-      expect(locateCb).to.have.been.calledWithMatch(null, '1.2.3.4');
     });
-
-    it('should return error when initial DNS lookup fails', () => {
-      config = makeConfig({
-        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
+    it('should catch an error in requestMiddleware', () => {
+      const overrides = {
+        requestMiddleware: sinon.spy((opts, done) => {
+          done();
+        }),
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({}, (error) => {
+        expect(overrides.requestMiddleware).to.be.calledOnce;
+        expect(error).to.be.an('error');
       });
-      client = new Eureka(config);
-
-      const locateCb = sinon.spy();
-      const resolveStub = sinon.stub(dns, 'resolveTxt');
-      resolveStub.onCall(0).yields(new Error('dns error'), null);
-
-      function shouldNotThrow() {
-        client.locateEurekaHostUsingDns(locateCb);
-      }
-
-      expect(shouldNotThrow).to.not.throw();
-      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
-      expect(locateCb).to.have.been.calledWithMatch({
-        message: 'Error resolving eureka server ' +
-          'list for region [my-region] using DNS: [Error: dns error]',
+    });
+    it('should check the returnType of requestMiddleware', () => {
+      const overrides = {
+        requestMiddleware: sinon.spy((opts, done) => done('foo')),
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({}, (error) => {
+        expect(error).to.be.an('error');
+        expect(error.message).to.equal('requestMiddleware did not return an object');
       });
     });
 
-    it('should return error when DNS lookup fails for an individual Eureka server', () => {
-      config = makeConfig({
-        eureka: { host: 'eureka.mydomain.com', port: 9999, ec2Region: 'my-region' },
-      });
-      client = new Eureka(config);
-
-      const locateCb = sinon.spy();
-      const resolveStub = sinon.stub(dns, 'resolveTxt');
-      resolveStub.onCall(0).yields(null, [eurekaHosts]);
-      resolveStub.onCall(1).yields(new Error('dns error'), null);
-
-      function shouldNotThrow() {
-        client.locateEurekaHostUsingDns(locateCb);
-      }
-
-      expect(shouldNotThrow).to.not.throw();
-      expect(dns.resolveTxt).to.have.been.calledWithMatch('txt.my-region.eureka.mydomain.com');
-      expect(dns.resolveTxt).to.have.been.calledWith(
-        sinon.match(value => eurekaHosts.indexOf(value))
-      );
-      expect(locateCb).to.have.been.calledWithMatch({
-        message: 'Error locating eureka server using DNS: [Error: dns error]',
+    it('should retry next server on request failure', (done) => {
+      const overrides = {
+        eureka: {
+          serviceUrls: {
+            default: ['http://serverA', 'http://serverB'],
+          },
+          maxRetries: 3,
+          requestRetryDelay: 0,
+        },
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      const requestStub = sinon.stub(request, 'get');
+      requestStub.onCall(0).yields(null, { statusCode: 500 }, null);
+      requestStub.onCall(1).yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({ uri: '/path' }, (error) => {
+        expect(error).to.be.null;
+        expect(requestStub).to.be.calledTwice;
+        expect(requestStub.args[0][0]).to.have.property('baseUrl', 'http://serverA');
+        expect(requestStub.args[1][0]).to.have.property('baseUrl', 'http://serverB');
+        done();
       });
     });
   });

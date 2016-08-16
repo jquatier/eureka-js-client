@@ -3,11 +3,12 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import merge from 'lodash/merge';
 import path from 'path';
-import dns from 'dns';
-import { series } from 'async';
+import { series, waterfall } from 'async';
 import { EventEmitter } from 'events';
 
 import AwsMetadata from './AwsMetadata';
+import ConfigClusterResolver from './ConfigClusterResolver';
+import DnsClusterResolver from './DnsClusterResolver';
 import Logger from './Logger';
 import defaultConfig from './defaultConfig';
 
@@ -66,10 +67,18 @@ export default class Eureka extends EventEmitter {
     // Validate the provided the values we need:
     this.validateConfig(this.config);
 
+    this.requestMiddleware = this.config.requestMiddleware;
+
     if (this.amazonDataCenter) {
       this.metadataClient = new AwsMetadata({
         logger: this.logger,
       });
+    }
+
+    if (this.config.eureka.useDns) {
+      this.clusterResolver = new DnsClusterResolver(this.config, this.logger);
+    } else {
+      this.clusterResolver = new ConfigClusterResolver(this.config, this.logger);
     }
 
     this.cache = {
@@ -102,18 +111,6 @@ export default class Eureka extends EventEmitter {
   }
 
   /*
-    Build the base Eureka server URL + path
-  */
-  buildEurekaUrl(callback = noop) {
-    this.lookupCurrentEurekaHost((err, eurekaHost) => {
-      if (err) return callback(err);
-      const { port, servicePath, ssl } = this.config.eureka;
-      const host = ssl ? 'https' : 'http';
-      callback(null, `${host}://${eurekaHost}:${port}${servicePath}`);
-    });
-  }
-
-  /*
     Registers instance with Eureka, begins heartbeats, and fetches registry.
   */
   start(callback = noop) {
@@ -134,8 +131,8 @@ export default class Eureka extends EventEmitter {
           if (this.config.eureka.waitForRegistry) {
             const waitForRegistryUpdate = (cb) => {
               this.fetchRegistry(() => {
-                const found = this.getInstancesByVipAddress(this.config.instance.vipAddress);
-                if (!found) setTimeout(() => waitForRegistryUpdate(cb), 2000);
+                const instances = this.getInstancesByVipAddress(this.config.instance.vipAddress);
+                if (instances.length === 0) setTimeout(() => waitForRegistryUpdate(cb), 2000);
                 else cb();
               });
             };
@@ -176,8 +173,10 @@ export default class Eureka extends EventEmitter {
     validate('instance', 'vipAddress');
     validate('instance', 'port');
     validate('instance', 'dataCenterInfo');
-    validate('eureka', 'host');
-    validate('eureka', 'port');
+
+    if (typeof config.requestMiddleware !== 'function') {
+      throw new TypeError('requestMiddleware must be a function');
+    }
   }
 
   /*
@@ -190,30 +189,27 @@ export default class Eureka extends EventEmitter {
         'Eureka. This usually means there is an issue connecting to the host ' +
         'specified. Start application with NODE_DEBUG=request for more logging.');
     }, 10000);
-    this.buildEurekaUrl((err, eurekaUrl) => {
-      if (err) return callback(err);
-      request.post({
-        url: eurekaUrl + this.config.instance.app,
-        json: true,
-        body: { instance: this.config.instance },
-        gzip: true,
-      }, (error, response, body) => {
-        clearTimeout(connectionTimeout);
-        if (!error && response.statusCode === 204) {
-          this.logger.info(
-            'registered with eureka: ',
-            `${this.config.instance.app}/${this.instanceId}`
-          );
-          this.emit('registered');
-          return callback(null);
-        } else if (error) {
-          this.logger.warn('Error registering with eureka client.', error);
-          return callback(error);
-        }
-        return callback(
-          new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`)
+    this.eurekaRequest({
+      method: 'POST',
+      uri: this.config.instance.app,
+      json: true,
+      body: { instance: this.config.instance },
+    }, (error, response, body) => {
+      clearTimeout(connectionTimeout);
+      if (!error && response.statusCode === 204) {
+        this.logger.info(
+          'registered with eureka: ',
+          `${this.config.instance.app}/${this.instanceId}`
         );
-      });
+        this.emit('registered');
+        return callback(null);
+      } else if (error) {
+        this.logger.warn('Error registering with eureka client.', error);
+        return callback(error);
+      }
+      return callback(
+        new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`)
+      );
     });
   }
 
@@ -221,27 +217,23 @@ export default class Eureka extends EventEmitter {
     De-registers with the Eureka server and stops heartbeats.
   */
   deregister(callback = noop) {
-    this.buildEurekaUrl((err, eurekaUrl) => {
-      if (err) return callback(err);
-      request.del({
-        url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
-        gzip: true,
-      }, (error, response, body) => {
-        if (!error && response.statusCode === 200) {
-          this.logger.info(
-            'de-registered with eureka: ',
-            `${this.config.instance.app}/${this.instanceId}`
-          );
-          this.emit('deregistered');
-          return callback(null);
-        } else if (error) {
-          this.logger.warn('Error deregistering with eureka', error);
-          return callback(error);
-        }
-        return callback(
-          new Error(`eureka deregistration FAILED: status: ${response.statusCode} body: ${body}`)
+    this.eurekaRequest({
+      method: 'DELETE',
+      uri: `${this.config.instance.app}/${this.instanceId}`,
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.info(
+          `de-registered with eureka: ${this.config.instance.app}/${this.instanceId}`
         );
-      });
+        this.emit('deregistered');
+        return callback(null);
+      } else if (error) {
+        this.logger.warn('Error deregistering with eureka', error);
+        return callback(error);
+      }
+      return callback(
+        new Error(`eureka deregistration FAILED: status: ${response.statusCode} body: ${body}`)
+      );
     });
   }
 
@@ -256,31 +248,26 @@ export default class Eureka extends EventEmitter {
   }
 
   renew() {
-    this.buildEurekaUrl((err, eurekaUrl) => {
-      if (err) {
-        this.logger.warn('eureka heartbeat FAILED, will retry', err);
-        return;
-      }
-      request.put({
-        url: `${eurekaUrl}${this.config.instance.app}/${this.instanceId}`,
-        gzip: true,
-      }, (error, response, body) => {
-        if (!error && response.statusCode === 200) {
-          this.logger.debug('eureka heartbeat success');
-          this.emit('heartbeat');
-        } else if (!error && response.statusCode === 404) {
-          this.logger.warn('eureka heartbeat FAILED, Re-registering app');
-          this.register();
-        } else {
-          if (error) {
-            this.logger.error('An error in the request occured.', error);
-          }
-          this.logger.warn(
-            'eureka heartbeat FAILED, will retry.',
-            `status: ${response ? response.statusCode : 'unknown'} body: ${body}`
-          );
+    this.eurekaRequest({
+      method: 'PUT',
+      uri: `${this.config.instance.app}/${this.instanceId}`,
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.debug('eureka heartbeat success');
+        this.emit('heartbeat');
+      } else if (!error && response.statusCode === 404) {
+        this.logger.warn('eureka heartbeat FAILED, Re-registering app');
+        this.register();
+      } else {
+        if (error) {
+          this.logger.error('An error in the request occured.', error);
         }
-      });
+        this.logger.warn(
+          'eureka heartbeat FAILED, will retry.' +
+          `statusCode: ${response ? response.statusCode : 'unknown'}` +
+          `body: ${body} ${error | ''} `
+        );
+      }
     });
   }
 
@@ -303,8 +290,8 @@ export default class Eureka extends EventEmitter {
     if (!appId) {
       throw new RangeError('Unable to query instances with no appId');
     }
-    const instances = this.cache.app[appId.toUpperCase()];
-    if (!instances) {
+    const instances = this.cache.app[appId.toUpperCase()] || [];
+    if (instances.length === 0) {
       this.logger.warn(`Unable to retrieve instances for appId: ${appId}`);
     }
     return instances;
@@ -317,8 +304,8 @@ export default class Eureka extends EventEmitter {
     if (!vipAddress) {
       throw new RangeError('Unable to query instances with no vipAddress');
     }
-    const instances = this.cache.vip[vipAddress];
-    if (!instances) {
+    const instances = this.cache.vip[vipAddress] || [];
+    if (instances.length === 0) {
       this.logger.warn(`Unable to retrieves instances for vipAddress: ${vipAddress}`);
     }
     return instances;
@@ -328,30 +315,26 @@ export default class Eureka extends EventEmitter {
     Retrieves all applications registered with the Eureka server
    */
   fetchRegistry(callback = noop) {
-    this.buildEurekaUrl((err, eurekaUrl) => {
-      if (err) return callback(err);
-      request.get({
-        url: eurekaUrl,
-        headers: {
-          Accept: 'application/json',
-        },
-        gzip: true,
-      }, (error, response, body) => {
-        if (!error && response.statusCode === 200) {
-          this.logger.debug('retrieved registry successfully');
-          try {
-            this.transformRegistry(JSON.parse(body));
-          } catch (ex) {
-            return callback(ex);
-          }
-          this.emit('registryUpdated');
-          return callback(null);
-        } else if (error) {
-          this.logger.warn('Error fetching registry', error);
-          return callback(error);
+    this.eurekaRequest({
+      uri: '',
+      headers: {
+        Accept: 'application/json',
+      },
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.debug('retrieved registry successfully');
+        try {
+          this.transformRegistry(JSON.parse(body));
+        } catch (ex) {
+          return callback(ex);
         }
-        callback(new Error('Unable to retrieve registry from Eureka server'));
-      });
+        this.emit('registryUpdated');
+        return callback(null);
+      } else if (error) {
+        this.logger.warn('Error fetching registry', error);
+        return callback(error);
+      }
+      callback(new Error('Unable to retrieve registry from Eureka server'));
     });
   }
 
@@ -443,47 +426,67 @@ export default class Eureka extends EventEmitter {
   }
 
   /*
-    Returns the Eureka host. This method is async because potentially we might have to
-    execute DNS lookups which is an async network operation.
+    Helper method for making a request to the Eureka server. Handles resolving
+    the current cluster as well as some default options.
   */
-  lookupCurrentEurekaHost(callback = noop) {
-    if (this.config.eureka.useDns) {
-      this.locateEurekaHostUsingDns((err, resolvedHost) => callback(err, resolvedHost));
-    } else {
-      return callback(null, this.config.eureka.host);
-    }
-  }
+  eurekaRequest(opts, callback, retryAttempt = 0) {
+    waterfall([
+      /*
+      Resolve Eureka Clusters
+      */
+      done => {
+        this.clusterResolver.resolveEurekaUrl((err, eurekaUrl) => {
+          if (err) return done(err);
+          const requestOpts = merge({}, opts, {
+            baseUrl: eurekaUrl,
+            gzip: true,
+          });
+          done(null, requestOpts);
+        }, retryAttempt);
+      },
+      /*
+      Apply Request Middleware
+      */
+      (requestOpts, done) => {
+        this.requestMiddleware(requestOpts, (newRequestOpts) => {
+          if (typeof newRequestOpts !== 'object') {
+            return done(new Error('requestMiddleware did not return an object'));
+          }
+          done(null, newRequestOpts);
+        });
+      },
+      /*
+      Perform Request
+       */
+      (requestOpts, done) => {
+        const method = requestOpts.method ? requestOpts.method.toLowerCase() : 'get';
+        request[method](requestOpts, (error, response, body) => {
+          done(error, response, body, requestOpts);
+        });
+      },
+    ],
+    /*
+    Handle Final Output.
+     */
+    (error, response, body, requestOpts) => {
+      if (error) this.logger.error('Problem making eureka request', error);
 
-  /*
-    Locates a Eureka host using DNS lookups. The DNS records are looked up by a naming
-    convention and TXT records must be created according to the Eureka Wiki here:
-    https://github.com/Netflix/eureka/wiki/Configuring-Eureka-in-AWS-Cloud
+      // Perform retry if request failed and we have attempts left
+      const responseInvalid = response
+        && response.statusCode
+        && String(response.statusCode)[0] === '5';
 
-    Naming convention: txt.<REGION>.<HOST>
-   */
-  locateEurekaHostUsingDns(callback = noop) {
-    const { ec2Region, host } = this.config.eureka;
-    if (!ec2Region) {
-      return callback(new Error(
-        'EC2 region was undefined. ' +
-        'config.eureka.ec2Region must be set to resolve Eureka using DNS records.'
-      ));
-    }
-    dns.resolveTxt(`txt.${ec2Region}.${host}`, (err, addresses) => {
-      if (err) {
-        return callback(new Error(
-          `Error resolving eureka server list for region [${ec2Region}] using DNS: [${err}]`
-        ));
+      if ((error || responseInvalid) && retryAttempt < this.config.eureka.maxRetries) {
+        const nextRetryDelay = this.config.eureka.requestRetryDelay * (retryAttempt + 1);
+        this.logger.warn(`Eureka request failed to endpoint ${requestOpts.baseUrl}, ` +
+          `next server retry in ${nextRetryDelay}ms`);
+
+        setTimeout(() => this.eurekaRequest(opts, callback, retryAttempt + 1),
+          nextRetryDelay);
+        return;
       }
-      const random = Math.floor(Math.random() * addresses[0].length);
-      dns.resolveTxt(`txt.${addresses[0][random]}`, (resolveErr, results) => {
-        if (resolveErr) {
-          this.logger.warn('Failed to locate DNS record for Eureka', resolveErr);
-          callback(new Error(`Error locating eureka server using DNS: [${resolveErr}]`));
-        }
-        this.logger.debug('Found Eureka Server @ ', results);
-        callback(null, [].concat(...results).shift());
-      });
+
+      callback(error, response, body);
     });
   }
 

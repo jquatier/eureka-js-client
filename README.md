@@ -1,7 +1,9 @@
 # eureka-js-client
-[![npm version](https://badge.fury.io/js/eureka-js-client.svg)](http://badge.fury.io/js/eureka-js-client) [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client) [![Coverage Status](https://coveralls.io/repos/jquatier/eureka-js-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/jquatier/eureka-js-client?branch=master) [![Dependency Status](https://david-dm.org/jquatier/eureka-js-client.svg)](https://david-dm.org/jquatier/eureka-js-client)
+[![npm version](https://badge.fury.io/js/eureka-js-client.svg)](http://badge.fury.io/js/eureka-js-client) [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg)](https://travis-ci.org/jquatier/eureka-js-client) [![Coverage Status](https://coveralls.io/repos/jquatier/eureka-js-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/jquatier/eureka-js-client?branch=master) [![Dependency Status](https://david-dm.org/jquatier/eureka-js-client.svg)](https://david-dm.org/jquatier/eureka-js-client) [![bitHound Overall Score](https://www.bithound.io/github/jquatier/eureka-js-client/badges/score.svg)](https://www.bithound.io/github/jquatier/eureka-js-client)
 
 A JavaScript implementation of a client for Eureka (https://github.com/Netflix/eureka), the Netflix OSS service registry.
+
+![](./img/eureka-js-client.jpg)
 
 ## Usage
 
@@ -87,6 +89,22 @@ const appInfo = client.getInstancesByAppId('YOURSERVICE');
 const appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
+### Providing Custom Request Middleware
+The client exposes the ability to modify the outgoing [request](https://www.npmjs.com/package/request) options object prior to a eureka call. This will be called on every eureka request, so it highly suggested that any long-lived external calls made in the middleware are cached or memoized. If the middleware returns anything other than an object, the eureka request will immediately fail and perform a retry if configured.
+
+```javascript
+// example using middleware to set-up HTTP authentication
+const client = new Eureka({
+  requestMiddleware: (requestOpts, done) => {
+    requestOpts.auth = {
+      user: 'username',
+      password: 'somepassword'
+    };
+    done(requestOpts);
+  }
+});
+```
+
 ## Configuring for AWS environments
 
 For AWS environments (`dataCenterInfo.name == 'Amazon'`) the client has built-in logic to request the AWS metadata that the Eureka server requires. See [Eureka REST schema](https://github.com/Netflix/eureka/wiki/Eureka-REST-operations) for more information.
@@ -118,15 +136,65 @@ Notes:
   - For status and healthcheck URLs, you may use the replacement key of `__HOST__` to use the public host.
   - Metadata fetching can be disabled by setting `config.eureka.fetchMetadata` to `false` if you want to provide your own metadata in AWS environments.
 
-### Looking up Eureka Servers in AWS using DNS
-If your have multiple availability zones and your DNS entries set up according to the Wiki article [Configuring Eureka in AWS Cloud](https://github.com/Netflix/eureka/wiki/Configuring-Eureka-in-AWS-Cloud), you'll want to set `config.eureka.useDns` to `true` and set `config.eureka.ec2Region` to the current region (usually this can be pulled into your application via an environment variable, or passed in directly at startup).
+### Looking up Eureka Servers using DNS
+If your have multiple availability zones and your DNS entries set up according to the Wiki article [Deploying Eureka Servers in EC2](https://github.com/Netflix/eureka/wiki/Deploying-Eureka-Servers-in-EC2#configuring-eips-using-dns), you'll want to set `config.eureka.useDns` to `true` and set `config.eureka.ec2Region` to the current region (usually this can be pulled into your application via an environment variable, or passed in directly at startup).
 
-This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above.
+This will cause the client to perform a DNS lookup using `config.eureka.host` and `config.eureka.ec2Region`. The naming convention for the DNS TXT records required for this to function is also described in the Wiki article above. This feature will also work in non-EC2 environments as long as the DNS records conform to the same convention. The results of the DNS resolution are cached in memory and refreshed every 5 minutes by default (set `config.eureka.clusterRefreshInterval` to override).
 
-## Configuration Options
+##### Zone Affinity
+By default, the client will first try to connect to the Eureka server located in the same availability-zone as it's currently in. If `availability-zone` is not set in the instance metadata, a random server will be chosen. This also applies when statically configuring the cluster (mapped by zone, see below). To disable this feature, set `config.eureka.preferSameZone` to `false`, and a random server will be chosen.
+
+### Statically configuring Eureka server list
+While the recommended approach for resolving the Eureka cluster is using DNS (see above), you can also statically configure the list of Eureka servers by zone or just using a simple default list. Make sure to provide the full protocol, host, port, and path to the Eureka REST service (usually `/apps/`) when using this approach.
+
+#### Static cluster configuration (map by zone)
+
+```javascript
+// example configuration for AWS (static map of Eureka cluster by availability-zone)
+const client = new Eureka({
+  instance: {
+    ... // application instance information
+  },
+  eureka: {
+    availabilityZones: {
+      'us-east-1': ['us-east-1c', 'us-east-1d', 'us-east-1e']
+    },
+    serviceUrls: {
+      'us-east-1c': [
+        'http://ec2-fake-552-627-568-165.compute-1.amazonaws.com:7001/eureka/v2/apps/', 'http://ec2-fake-368-101-182-134.compute-1.amazonaws.com:7001/eureka/v2/apps/'
+      ],
+      'us-east-1d': [...],
+      'us-east-1e': [...]
+    }
+  },
+});
+```
+
+#### Static cluster configuration (list)
+
+```javascript
+// example configuration (static list of Eureka cluster servers)
+const client = new Eureka({
+  instance: {
+    ... // application instance information
+  },
+  eureka: {
+    serviceUrls: {
+      default: [
+        'http://ec2-fake-552-627-568-165.compute-1.amazonaws.com:7001/eureka/v2/apps/', 'http://ec2-fake-368-101-182-134.compute-1.amazonaws.com:7001/eureka/v2/apps/'
+      ]
+    }
+  },
+});
+```
+
+## Advanced Configuration Options
 option | default value | description
 ---- | --- | ---
+`requestMiddleware` | noop | Custom middleware function to modify the outgoing [request](https://www.npmjs.com/package/request) to eureka
 `logger` | console logging | logger implementation for the client to use
+`eureka.maxRetries` | `3` | Number of times to retry all requests to eureka
+`eureka.requestRetryDelay` | `500` | milliseconds to wait between retries. This will be multiplied by the # of failed retries.
 `eureka.heartbeatInterval` | `30000` | milliseconds to wait between heartbeats
 `eureka.registryFetchInterval` | `30000` | milliseconds to wait between registry fetches
 `eureka.fetchRegistry` | `true` | enable/disable registry fetching
@@ -134,6 +202,8 @@ option | default value | description
 `eureka.servicePath` | `/eureka/v2/apps/` | path to eureka REST service
 `eureka.ssl` | `false` | enable SSL communication with Eureka server
 `eureka.useDns` | `false` | look up Eureka server using DNS, see [Looking up Eureka Servers in AWS using DNS](#looking-up-eureka-servers-in-aws-using-dns)
+`eureka.preferSameZone` | `true` | enable/disable zone affinity when locating a Eureka server
+`eureka.clusterRefreshInterval` | `300000` | milliseconds to wait between refreshing cluster hosts (DNS resolution only)
 `eureka.fetchMetadata` | `true` | fetch AWS metadata when in AWS environment, see [Configuring for AWS environments](#configuring-for-aws-environments)
 `eureka.useLocalMetadata` | `false` | use local IP and local hostname from metadata when in an AWS environment.
 
