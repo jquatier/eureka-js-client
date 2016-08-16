@@ -89,6 +89,22 @@ const appInfo = client.getInstancesByAppId('YOURSERVICE');
 const appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
+### Providing Custom Request Middleware
+The client exposes the ability to modify the outgoing [request](https://www.npmjs.com/package/request) options object prior to a eureka call. This will be called on every eureka request, so it highly suggested that any long-lived external calls made in the middleware are cached or memoized. If the middleware returns anything other than an object, the eureka request will immediately fail and perform a retry if configured.
+
+```javascript
+// example using middleware to set-up HTTP authentication
+const client = new Eureka({
+  requestMiddleware: (requestOpts, done) => {
+    requestOpts.auth = {
+      user: 'username',
+      password: 'somepassword'
+    };
+    done(requestOpts);
+  }
+});
+```
+
 ## Configuring for AWS environments
 
 For AWS environments (`dataCenterInfo.name == 'Amazon'`) the client has built-in logic to request the AWS metadata that the Eureka server requires. See [Eureka REST schema](https://github.com/Netflix/eureka/wiki/Eureka-REST-operations) for more information.
@@ -172,7 +188,10 @@ const client = new Eureka({
 ## Advanced Configuration Options
 option | default value | description
 ---- | --- | ---
+`requestMiddleware` | noop | Custom middleware function to modify the outgoing [request](https://www.npmjs.com/package/request) to eureka
 `logger` | console logging | logger implementation for the client to use
+`eureka.maxRetries` | `3` | Number of times to retry all requests to eureka
+`eureka.requestRetryDelay` | `500` | milliseconds to wait between retries. This will be multiplied by the # of failed retries.
 `eureka.heartbeatInterval` | `30000` | milliseconds to wait between heartbeats
 `eureka.registryFetchInterval` | `30000` | milliseconds to wait between registry fetches
 `eureka.fetchRegistry` | `true` | enable/disable registry fetching
