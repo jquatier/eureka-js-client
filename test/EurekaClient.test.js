@@ -783,8 +783,9 @@ describe('Eureka client', () => {
         vipAddress: '1.2.3.4',
         port: 9999,
         dataCenterInfo: { name: 'Amazon' },
-        statusPageUrl: 'http://__HOST__:8080/',
+        statusPageUrl: 'http://__HOST__:8080/info',
         healthCheckUrl: 'http://__HOST__:8077/healthcheck',
+        homePageUrl: 'http://__HOST__:8080/',
       };
       awsMetadata = {
         'public-hostname': 'ec2-127-0-0-1.us-fake-1.mydomain.com',
@@ -813,8 +814,9 @@ describe('Eureka client', () => {
       client.addInstanceMetadata(metadataSpy);
       expect(client.config.instance.hostName).to.equal('ec2-127-0-0-1.us-fake-1.mydomain.com');
       expect(client.config.instance.ipAddr).to.equal('54.54.54.54');
-      expect(client.config.instance.statusPageUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8080/');
+      expect(client.config.instance.statusPageUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8080/info');
       expect(client.config.instance.healthCheckUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8077/healthcheck');
+      expect(client.config.instance.homePageUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8080/');
     });
 
     it('should update hosts with AWS metadata local host if useLocalMetadata === true', () => {
@@ -832,8 +834,9 @@ describe('Eureka client', () => {
       client.addInstanceMetadata(metadataSpy);
       expect(client.config.instance.hostName).to.equal('fake-1');
       expect(client.config.instance.ipAddr).to.equal('10.0.1.1');
-      expect(client.config.instance.statusPageUrl).to.equal('http://fake-1:8080/');
+      expect(client.config.instance.statusPageUrl).to.equal('http://fake-1:8080/info');
       expect(client.config.instance.healthCheckUrl).to.equal('http://fake-1:8077/healthcheck');
+      expect(client.config.instance.homePageUrl).to.equal('http://fake-1:8080/');
     });
   });
 

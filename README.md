@@ -117,8 +117,9 @@ const client = new Eureka({
     app: 'jqservice',
     port: 8080,
     vipAddress: 'jq.test.something.com',
-    statusPageUrl: 'http://__HOST__:8080/',
+    statusPageUrl: 'http://__HOST__:8080/info',
     healthCheckUrl: 'http://__HOST__:8077/healthcheck',
+    homePageUrl: 'http://__HOST__:8080/',
     dataCenterInfo: {
       name: 'Amazon',
     },
@@ -289,7 +290,7 @@ const client = new Eureka({
     app: 'jqservice',
     hostName: 'localhost',
     ipAddr: '127.0.0.1',
-    statusPageUrl: 'http://localhost:8080',
+    statusPageUrl: 'http://localhost:8080/info',
     port: {
       '$': 8080,
       '@enabled': 'true',
