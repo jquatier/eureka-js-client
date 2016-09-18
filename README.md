@@ -133,8 +133,8 @@ const client = new Eureka({
 ```
 
 Notes:
-  - Under this configuration, the instance `hostName` and `ipAddr` will be set to the public host and public IP that the AWS metadata provides.
-  - For status and healthcheck URLs, you may use the replacement key of `__HOST__` to use the public host.
+  - Under this configuration, the instance `hostName` and `ipAddr` will be set to the public host and public IP that the AWS metadata provides. You can set `eureka.useLocalMetadata` to `true` to use the private host and private IP address instead.
+  - For status and healthcheck URLs, you may use the replacement key of `__HOST__` to use the host from the metadata.
   - Metadata fetching can be disabled by setting `config.eureka.fetchMetadata` to `false` if you want to provide your own metadata in AWS environments.
 
 ### Looking up Eureka Servers using DNS
