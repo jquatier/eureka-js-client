@@ -389,11 +389,11 @@ export default class Eureka extends EventEmitter {
     option 'eureka.useLocalMetadata' is true, then the local IP address and
     hostname is used. Otherwise, the public IP address and hostname is used.
 
-    A string replacement is done on the healthCheckUrl and statusPageUrl so
-    that users can define the URLs with a placeholder for the host ('__HOST__').
-    This allows flexibility since the host isn't known until the metadata is
-    fetched. The replaced value respects the config option 'eureka.useLocalMetadata'
-    as described above.
+    A string replacement is done on the healthCheckUrl, statusPageUrl and
+    homePageUrl so that users can define the URLs with a placeholder for the
+    host ('__HOST__'). This allows flexibility since the host isn't known until
+    the metadata is fetched. The replaced value respects the config option
+    'eureka.useLocalMetadata' as described above.
 
     This will only get called when dataCenterInfo.name is Amazon, but you can
     set config.eureka.fetchMetadata to false if you want to provide your own
@@ -419,6 +419,11 @@ export default class Eureka extends EventEmitter {
         const { healthCheckUrl } = this.config.instance;
         const replacedUrl = healthCheckUrl.replace('__HOST__', metadataHostName);
         this.config.instance.healthCheckUrl = replacedUrl;
+      }
+      if (this.config.instance.homePageUrl) {
+        const { homePageUrl } = this.config.instance;
+        const replacedUrl = homePageUrl.replace('__HOST__', metadataHostName);
+        this.config.instance.homePageUrl = replacedUrl;
       }
 
       callback();
