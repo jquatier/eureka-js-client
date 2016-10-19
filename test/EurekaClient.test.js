@@ -182,12 +182,12 @@ describe('Eureka client', () => {
     let fetchRegistrySpy;
     let heartbeatsSpy;
     let registryFetchSpy;
-    before(() => {
+    beforeEach(() => {
       config = makeConfig();
       client = new Eureka(config);
     });
 
-    after(() => {
+    afterEach(() => {
       registerSpy.restore();
       fetchRegistrySpy.restore();
       heartbeatsSpy.restore();
@@ -209,6 +209,21 @@ describe('Eureka client', () => {
         expect(registryFetchSpy).to.have.been.calledOnce;
         expect(registryFetchSpy).to.have.been.calledOnce;
         expect(eventSpy).to.have.been.calledOnce;
+        done();
+      });
+    });
+
+    it('should return error on start failure', (done) => {
+      registerSpy = sinon.stub(client, 'register').yields(new Error('fail'));
+      fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
+      heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
+      registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
+      const eventSpy = sinon.spy();
+      client.on('started', eventSpy);
+
+      client.start((error) => {
+        expect(error).to.match(/fail/);
+        expect(eventSpy).to.not.have.been.called;
         done();
       });
     });

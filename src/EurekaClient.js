@@ -144,8 +144,11 @@ export default class Eureka extends EventEmitter {
         }
       },
     ], (err, ...rest) => {
-      if (err) this.logger.warn('Error starting the Eureka Client', err);
-      this.emit('started');
+      if (err) {
+        this.logger.warn('Error starting the Eureka Client', err);
+      } else {
+        this.emit('started');
+      }
       callback(err, ...rest);
     });
   }
