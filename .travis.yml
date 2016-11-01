@@ -6,10 +6,7 @@ services:
   - docker
 
 node_js:
-  - "0.10"
-  - "0.12"
-  - "iojs"
-  - "stable"
+  - stable
 
 script:
   - npm run test && npm run integration
