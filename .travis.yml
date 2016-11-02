@@ -8,8 +8,8 @@ services:
 node_js:
   - "0.10"
   - "0.12"
-  - "iojs"
-  - "stable"
+  - "4"
+  - "6"
 
 script:
   - npm run test && npm run integration
