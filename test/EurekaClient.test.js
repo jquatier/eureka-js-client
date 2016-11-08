@@ -695,6 +695,7 @@ describe('Eureka client', () => {
     let instance3;
     let app1;
     let app2;
+    let app3;
     beforeEach(() => {
       config = makeConfig();
       registry = {
@@ -705,6 +706,7 @@ describe('Eureka client', () => {
       instance3 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2', status: 'UP' };
       app1 = { name: 'theapp', instance: instance1 };
       app2 = { name: 'theapptwo', instance: [instance2, instance3] };
+      app3 = { name: 'theappthree', instance: [instance1, instance3] };
       client = new Eureka(config);
     });
 
@@ -727,6 +729,14 @@ describe('Eureka client', () => {
       client.transformRegistry(registry);
       expect(client.cache.app[app2.name.toUpperCase()].length).to.equal(2);
       expect(client.cache.vip[instance2.vipAddress].length).to.equal(2);
+    });
+
+    it('should transform a registry with a single application with multiple vips', () => {
+      registry.applications.application = [app3];
+      client.transformRegistry(registry);
+      expect(client.cache.app[app3.name.toUpperCase()].length).to.equal(2);
+      expect(client.cache.vip[instance1.vipAddress].length).to.equal(1);
+      expect(client.cache.vip[instance3.vipAddress].length).to.equal(1);
     });
   });
 
