@@ -269,6 +269,15 @@ const client = new Eureka({
   },
 });
 ```
+If you are planning on connecting to a eureka service in AWS you will need to add the corresponding `dataCenterInfo` information:
+
+```javascript
+
+  dataCenterInfo: {
+   '@class': 'com.netflix.appinfo.AmazonInfo',
+   name: 'Amazon',
+  }
+```
 
 ### 404 Not Found Errors from Eureka Server
 
