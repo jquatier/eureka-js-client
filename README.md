@@ -78,15 +78,13 @@ client.stop();
 ### Get Instances By App ID
 
 ```javascript
-// appInfo.application.instance contains array of instances
-const appInfo = client.getInstancesByAppId('YOURSERVICE');
+const instances = client.getInstancesByAppId('YOURSERVICE');
 ```
 
 ### Get Instances By Vip Address
 
 ```javascript
-// appInfo.application.instance contains array of instances
-const appInfo = client.getInstancesByVipAddress('YOURSERVICEVIP');
+const instances = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
 ### Providing Custom Request Middleware
