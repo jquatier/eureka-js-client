@@ -372,14 +372,20 @@ export default class Eureka extends EventEmitter {
       const instances = app.instance.filter((instance) => (this.validateInstance(instance)));
       cache.app[app.name.toUpperCase()] = instances;
       instances.forEach((inst) => {
-        if (!cache.vip[inst.vipAddress]) {
-          cache.vip[inst.vipAddress] = [];
-        }
-        cache.vip[inst.vipAddress].push(inst);
+        const vipAddresses = this.splitVipAddress(inst.vipAddress);
+        vipAddresses.forEach((vipAddress) => {
+          if (!cache.vip[vipAddress]) {
+            cache.vip[vipAddress] = [];
+          }
+          cache.vip[vipAddress].push(inst);
+        });
       });
     } else if (this.validateInstance(app.instance)) {
       const instances = [app.instance];
-      cache.vip[app.instance.vipAddress] = instances;
+      const vipAddresses = this.splitVipAddress(app.instance.vipAddress);
+      vipAddresses.forEach((vipAddress) => {
+        cache.vip[vipAddress] = instances;
+      });
       cache.app[app.name.toUpperCase()] = instances;
     }
   }
@@ -389,6 +395,13 @@ export default class Eureka extends EventEmitter {
   */
   validateInstance(instance) {
     return (!this.config.eureka.filterUpInstances || instance.status === 'UP');
+  }
+
+  /*
+    Returns an array of vipAddresses from string vipAddress given by eureka
+  */
+  splitVipAddress(vipAddress) { // eslint-disable-line
+    return vipAddress.split(',');
   }
 
   /*
