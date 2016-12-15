@@ -746,8 +746,10 @@ describe('Eureka client', () => {
     let app;
     let instance1;
     let instance2;
+    let instance3;
     let downInstance;
     let theVip;
+    let multiVip;
     let cache;
     beforeEach(() => {
       config = makeConfig({
@@ -755,8 +757,10 @@ describe('Eureka client', () => {
       });
       client = new Eureka(config);
       theVip = 'theVip';
+      multiVip = 'fooVip,barVip';
       instance1 = { host: '127.0.0.1', port: 1000, vipAddress: theVip, status: 'UP' };
       instance2 = { host: '127.0.0.2', port: 2000, vipAddress: theVip, status: 'UP' };
+      instance3 = { host: '127.0.0.2', port: 2000, vipAddress: multiVip, status: 'UP' };
       downInstance = { host: '127.0.0.2', port: 2000, vipAddress: theVip, status: 'DOWN' };
       app = { name: 'theapp' };
       cache = { app: {}, vip: {} };
@@ -769,11 +773,21 @@ describe('Eureka client', () => {
       expect(cache.vip[theVip].length).to.equal(1);
     });
 
-    it('should transform an app with two or more instances', () => {
-      app.instance = [instance1, instance2];
+    it('should transform an app with one instance that has a comma separated vipAddress', () => {
+      app.instance = instance3;
       client.transformApp(app, cache);
-      expect(cache.app[app.name.toUpperCase()].length).to.equal(2);
+      expect(cache.app[app.name.toUpperCase()].length).to.equal(1);
+      expect(cache.vip[multiVip.split(',')[0]].length).to.equal(1);
+      expect(cache.vip[multiVip.split(',')[1]].length).to.equal(1);
+    });
+
+    it('should transform an app with two or more instances', () => {
+      app.instance = [instance1, instance2, instance3];
+      client.transformApp(app, cache);
+      expect(cache.app[app.name.toUpperCase()].length).to.equal(3);
       expect(cache.vip[theVip].length).to.equal(2);
+      expect(cache.vip[multiVip.split(',')[0]].length).to.equal(1);
+      expect(cache.vip[multiVip.split(',')[1]].length).to.equal(1);
     });
 
     it('should filter UP instances by default', () => {
