@@ -401,6 +401,10 @@ export default class Eureka extends EventEmitter {
     Returns an array of vipAddresses from string vipAddress given by eureka
   */
   splitVipAddress(vipAddress) { // eslint-disable-line
+    if (typeof vipAddress !== 'string') {
+      return [];
+    }
+
     return vipAddress.split(',');
   }
 
