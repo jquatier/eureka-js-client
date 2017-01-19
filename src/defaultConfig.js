@@ -15,6 +15,7 @@ export default {
     clusterRefreshInterval: 300000,
     fetchMetadata: true,
     useLocalMetadata: false,
+    preferIpAddress: false,
   },
   instance: {},
 };
