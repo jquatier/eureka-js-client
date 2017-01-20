@@ -132,6 +132,7 @@ const client = new Eureka({
 
 Notes:
   - Under this configuration, the instance `hostName` and `ipAddr` will be set to the public host and public IP that the AWS metadata provides. You can set `eureka.useLocalMetadata` to `true` to use the private host and private IP address instead.
+  - If you want to register using the IP address as the hostname, set `eureka.preferIpAddress` to `true`. This may be used in combination with `eureka.useLocalMetadata` for selecting the private or public IP.
   - For status and healthcheck URLs, you may use the replacement key of `__HOST__` to use the host from the metadata.
   - Metadata fetching can be disabled by setting `config.eureka.fetchMetadata` to `false` if you want to provide your own metadata in AWS environments.
 
@@ -205,6 +206,7 @@ option | default value | description
 `eureka.clusterRefreshInterval` | `300000` | milliseconds to wait between refreshing cluster hosts (DNS resolution only)
 `eureka.fetchMetadata` | `true` | fetch AWS metadata when in AWS environment, see [Configuring for AWS environments](#configuring-for-aws-environments)
 `eureka.useLocalMetadata` | `false` | use local IP and local hostname from metadata when in an AWS environment.
+`eureka.preferIpAddress` | `false` | use IP address (local or public) as the hostname for registration when in an AWS environment.
 
 ## Events
 

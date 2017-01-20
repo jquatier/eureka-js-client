@@ -867,6 +867,26 @@ describe('Eureka client', () => {
       expect(client.config.instance.homePageUrl).to.equal('http://ec2-127-0-0-1.us-fake-1.mydomain.com:8080/');
     });
 
+    it('should update hosts with AWS metadata public IP when preferIpAddress === true', () => {
+      // Setup
+      config = {
+        instance: instanceConfig,
+        eureka: { host: '127.0.0.1', port: 9999, preferIpAddress: true },
+      };
+      client = new Eureka(config);
+      metadataSpy = sinon.spy();
+
+      sinon.stub(client.metadataClient, 'fetchMetadata').yields(awsMetadata);
+
+      // Act
+      client.addInstanceMetadata(metadataSpy);
+      expect(client.config.instance.hostName).to.equal('54.54.54.54');
+      expect(client.config.instance.ipAddr).to.equal('54.54.54.54');
+      expect(client.config.instance.statusPageUrl).to.equal('http://54.54.54.54:8080/info');
+      expect(client.config.instance.healthCheckUrl).to.equal('http://54.54.54.54:8077/healthcheck');
+      expect(client.config.instance.homePageUrl).to.equal('http://54.54.54.54:8080/');
+    });
+
     it('should update hosts with AWS metadata local host if useLocalMetadata === true', () => {
       // Setup
       config = {
@@ -885,6 +905,27 @@ describe('Eureka client', () => {
       expect(client.config.instance.statusPageUrl).to.equal('http://fake-1:8080/info');
       expect(client.config.instance.healthCheckUrl).to.equal('http://fake-1:8077/healthcheck');
       expect(client.config.instance.homePageUrl).to.equal('http://fake-1:8080/');
+    });
+
+    it('should update hosts with AWS metadata local IP if useLocalMetadata === true' +
+      ' and preferIpAddress === true', () => {
+      // Setup
+      config = {
+        instance: instanceConfig,
+        eureka: { host: '127.0.0.1', port: 9999, useLocalMetadata: true, preferIpAddress: true },
+      };
+      client = new Eureka(config);
+      metadataSpy = sinon.spy();
+
+      sinon.stub(client.metadataClient, 'fetchMetadata').yields(awsMetadata);
+
+      // Act
+      client.addInstanceMetadata(metadataSpy);
+      expect(client.config.instance.hostName).to.equal('10.0.1.1');
+      expect(client.config.instance.ipAddr).to.equal('10.0.1.1');
+      expect(client.config.instance.statusPageUrl).to.equal('http://10.0.1.1:8080/info');
+      expect(client.config.instance.healthCheckUrl).to.equal('http://10.0.1.1:8077/healthcheck');
+      expect(client.config.instance.homePageUrl).to.equal('http://10.0.1.1:8080/');
     });
   });
 
