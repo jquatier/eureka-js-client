@@ -412,7 +412,8 @@ export default class Eureka extends EventEmitter {
     Fetches the metadata using the built-in client and updates the instance
     configuration with the hostname and IP address. If the value of the config
     option 'eureka.useLocalMetadata' is true, then the local IP address and
-    hostname is used. Otherwise, the public IP address and hostname is used.
+    hostname is used. Otherwise, the public IP address and hostname is used. If
+    'eureka.preferIpAddress' is true, the IP address will be used as the hostname.
 
     A string replacement is done on the healthCheckUrl, statusPageUrl and
     homePageUrl so that users can define the URLs with a placeholder for the
@@ -431,23 +432,25 @@ export default class Eureka extends EventEmitter {
         metadataResult
       );
       const useLocal = this.config.eureka.useLocalMetadata;
+      const preferIpAddress = this.config.eureka.preferIpAddress;
       const metadataHostName = metadataResult[useLocal ? 'local-hostname' : 'public-hostname'];
-      this.config.instance.hostName = metadataHostName;
-      this.config.instance.ipAddr = metadataResult[useLocal ? 'local-ipv4' : 'public-ipv4'];
+      const metadataIpAddress = metadataResult[useLocal ? 'local-ipv4' : 'public-ipv4'];
+      this.config.instance.hostName = preferIpAddress ? metadataIpAddress : metadataHostName;
+      this.config.instance.ipAddr = metadataIpAddress;
 
       if (this.config.instance.statusPageUrl) {
         const { statusPageUrl } = this.config.instance;
-        const replacedUrl = statusPageUrl.replace('__HOST__', metadataHostName);
+        const replacedUrl = statusPageUrl.replace('__HOST__', this.config.instance.hostName);
         this.config.instance.statusPageUrl = replacedUrl;
       }
       if (this.config.instance.healthCheckUrl) {
         const { healthCheckUrl } = this.config.instance;
-        const replacedUrl = healthCheckUrl.replace('__HOST__', metadataHostName);
+        const replacedUrl = healthCheckUrl.replace('__HOST__', this.config.instance.hostName);
         this.config.instance.healthCheckUrl = replacedUrl;
       }
       if (this.config.instance.homePageUrl) {
         const { homePageUrl } = this.config.instance;
-        const replacedUrl = homePageUrl.replace('__HOST__', metadataHostName);
+        const replacedUrl = homePageUrl.replace('__HOST__', this.config.instance.hostName);
         this.config.instance.homePageUrl = replacedUrl;
       }
 
