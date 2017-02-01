@@ -12,10 +12,6 @@ chai.use(sinonChai);
 function makeConfig(overrides = {}) {
   const config = {
     instance: {
-      app: 'app',
-      vipAddress: '1.2.2.3',
-      hostName: 'myhost',
-      port: 9999,
       dataCenterInfo: { metadata: { 'availability-zone': '1b' } },
     },
     eureka: {
@@ -236,6 +232,33 @@ describe('DNS Cluster Resolver', () => {
         expect(hosts).to.include.members(['1.2.3.4', '2.2.3.4', '3.2.3.4']);
         dnsResolver.resolveClusterHosts((error, hostsTwo) => {
           expect(hostsTwo[0]).to.equal('2.2.3.4');
+          expect(hostsTwo).to.include.members(['1.2.3.4', '2.2.3.4', '3.2.3.4']);
+          done();
+        });
+      });
+    });
+
+    it('should resolve hosts when dataCenterInfo is undefined', (done) => {
+      const config = {
+        instance: {},
+        eureka: {
+          preferSameZone: true,
+          host: 'eureka.mydomain.com',
+          servicePath: '/eureka/v2/apps/',
+          port: 9999,
+          maxRetries: 0,
+          ec2Region: 'my-region',
+        },
+      };
+      const dnsResolver = new DnsClusterResolver(config);
+      const resolveStub = sinon.stub(dns, 'resolveTxt');
+      resolveStub.withArgs('txt.my-region.eureka.mydomain.com').yields(null, [eurekaHosts]);
+      resolveStub.withArgs('txt.1a.eureka.mydomain.com').yields(null, [['1.2.3.4']]);
+      resolveStub.withArgs('txt.1b.eureka.mydomain.com').yields(null, [['2.2.3.4']]);
+      resolveStub.withArgs('txt.1c.eureka.mydomain.com').yields(null, [['3.2.3.4']]);
+      dnsResolver.resolveClusterHosts((err, hosts) => {
+        expect(hosts).to.include.members(['1.2.3.4', '2.2.3.4', '3.2.3.4']);
+        dnsResolver.resolveClusterHosts((error, hostsTwo) => {
           expect(hostsTwo).to.include.members(['1.2.3.4', '2.2.3.4', '3.2.3.4']);
           done();
         });

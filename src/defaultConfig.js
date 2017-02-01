@@ -14,6 +14,7 @@ export default {
     preferSameZone: true,
     clusterRefreshInterval: 300000,
     fetchMetadata: true,
+    registerWithEureka: true,
     useLocalMetadata: false,
     preferIpAddress: false,
   },
