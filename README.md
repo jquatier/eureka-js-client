@@ -197,6 +197,7 @@ option | default value | description
 `eureka.requestRetryDelay` | `500` | milliseconds to wait between retries. This will be multiplied by the # of failed retries.
 `eureka.heartbeatInterval` | `30000` | milliseconds to wait between heartbeats
 `eureka.registryFetchInterval` | `30000` | milliseconds to wait between registry fetches
+`eureka.registerWithEureka` | `true` | enable/disable Eureka registration
 `eureka.fetchRegistry` | `true` | enable/disable registry fetching
 `eureka.filterUpInstances` | `true` | enable/disable filtering of instances with status === `UP`
 `eureka.servicePath` | `/eureka/v2/apps/` | path to eureka REST service

@@ -79,7 +79,8 @@ export default class DnsClusterResolver {
 
   resolveClusterHosts(callback = noop) {
     const { ec2Region, host, preferSameZone } = this.config.eureka;
-    const { metadata } = this.config.instance.dataCenterInfo;
+    const { dataCenterInfo } = this.config.instance;
+    const metadata = dataCenterInfo ? dataCenterInfo.metadata : undefined;
     const availabilityZone = metadata ? metadata['availability-zone'] : undefined;
     const dnsHost = `txt.${ec2Region}.${host}`;
     dns.resolveTxt(dnsHost, (err, addresses) => {

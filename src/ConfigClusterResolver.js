@@ -21,7 +21,8 @@ export default class ConfigClusterResolver {
   buildServiceUrls() {
     const { host, port, servicePath, ssl,
       serviceUrls, preferSameZone } = this.config.eureka;
-    const { metadata } = this.config.instance.dataCenterInfo;
+    const { dataCenterInfo } = this.config.instance;
+    const metadata = dataCenterInfo ? dataCenterInfo.metadata : undefined;
     const instanceZone = metadata ? metadata['availability-zone'] : undefined;
     const urls = [];
     const zones = this.getAvailabilityZones();

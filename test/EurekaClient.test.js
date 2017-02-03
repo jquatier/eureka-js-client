@@ -79,9 +79,20 @@ describe('Eureka client', () => {
         });
       }
 
+      function shouldWorkNoInstance() {
+        return new Eureka({
+          eureka: {
+            registerWithEureka: false,
+            host: true,
+            port: true,
+          },
+        });
+      }
+
       expect(shouldThrow).to.throw();
       expect(noApp).to.throw(/app/);
       expect(shouldWork).to.not.throw();
+      expect(shouldWorkNoInstance).to.not.throw();
     });
 
     it('should use DnsClusterResolver when configured', () => {
@@ -207,6 +218,30 @@ describe('Eureka client', () => {
         expect(fetchRegistrySpy).to.have.been.calledOnce;
         expect(heartbeatsSpy).to.have.been.calledOnce;
         expect(registryFetchSpy).to.have.been.calledOnce;
+        expect(eventSpy).to.have.been.calledOnce;
+        done();
+      });
+    });
+
+    it('should call fetch registry and startRegistryFetches when registration disabled', (done) => {
+      config = makeConfig({
+        eureka: {
+          registerWithEureka: false,
+        },
+      });
+      client = new Eureka(config);
+
+      registerSpy = sinon.stub(client, 'register').callsArg(0);
+      fetchRegistrySpy = sinon.stub(client, 'fetchRegistry').callsArg(0);
+      heartbeatsSpy = sinon.stub(client, 'startHeartbeats');
+      registryFetchSpy = sinon.stub(client, 'startRegistryFetches');
+      const eventSpy = sinon.spy();
+      client.on('started', eventSpy);
+
+      client.start(() => {
+        expect(registerSpy).to.not.have.been.called;
+        expect(fetchRegistrySpy).to.have.been.calledOnce;
+        expect(heartbeatsSpy).to.not.have.been.called;
         expect(registryFetchSpy).to.have.been.calledOnce;
         expect(eventSpy).to.have.been.calledOnce;
         done();
@@ -285,13 +320,13 @@ describe('Eureka client', () => {
     let config;
     let client;
     let deregisterSpy;
-    before(() => {
+    beforeEach(() => {
       config = makeConfig();
       client = new Eureka(config);
       deregisterSpy = sinon.stub(client, 'deregister').callsArg(0);
     });
 
-    after(() => {
+    afterEach(() => {
       deregisterSpy.restore();
     });
 
@@ -300,6 +335,21 @@ describe('Eureka client', () => {
       client.stop(stopCb);
 
       expect(deregisterSpy).to.have.been.calledOnce;
+      expect(stopCb).to.have.been.calledOnce;
+    });
+
+    it('should skip deregister if registration disabled', () => {
+      config = makeConfig({
+        eureka: {
+          registerWithEureka: false,
+        },
+      });
+      client = new Eureka(config);
+
+      const stopCb = sinon.spy();
+      client.stop(stopCb);
+
+      expect(deregisterSpy).to.not.have.been.called;
       expect(stopCb).to.have.been.calledOnce;
     });
   });

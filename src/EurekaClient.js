@@ -104,9 +104,11 @@ export default class Eureka extends EventEmitter {
     Helper method to determine if this is an AWS datacenter.
   */
   get amazonDataCenter() {
+    const { dataCenterInfo } = this.config.instance;
     return (
-      this.config.instance.dataCenterInfo.name &&
-      this.config.instance.dataCenterInfo.name.toLowerCase() === 'amazon'
+      dataCenterInfo &&
+      dataCenterInfo.name &&
+      dataCenterInfo.name.toLowerCase() === 'amazon'
     );
   }
 
@@ -122,10 +124,15 @@ export default class Eureka extends EventEmitter {
         done();
       },
       done => {
-        this.register(done);
+        if (this.config.eureka.registerWithEureka) {
+          return this.register(done);
+        }
+        done();
       },
       done => {
-        this.startHeartbeats();
+        if (this.config.eureka.registerWithEureka) {
+          this.startHeartbeats();
+        }
         if (this.config.eureka.fetchRegistry) {
           this.startRegistryFetches();
           if (this.config.eureka.waitForRegistry) {
@@ -157,9 +164,13 @@ export default class Eureka extends EventEmitter {
     De-registers instance with Eureka, stops heartbeats / registry fetches.
   */
   stop(callback = noop) {
-    this.deregister(callback);
-    clearInterval(this.heartbeat);
     clearInterval(this.registryFetch);
+    if (this.config.eureka.registerWithEureka) {
+      clearInterval(this.heartbeat);
+      this.deregister(callback);
+    } else {
+      callback();
+    }
   }
 
   /*
@@ -172,10 +183,12 @@ export default class Eureka extends EventEmitter {
       }
     }
 
-    validate('instance', 'app');
-    validate('instance', 'vipAddress');
-    validate('instance', 'port');
-    validate('instance', 'dataCenterInfo');
+    if (config.eureka.registerWithEureka) {
+      validate('instance', 'app');
+      validate('instance', 'vipAddress');
+      validate('instance', 'port');
+      validate('instance', 'dataCenterInfo');
+    }
 
     if (typeof config.requestMiddleware !== 'function') {
       throw new TypeError('requestMiddleware must be a function');
@@ -281,7 +294,7 @@ export default class Eureka extends EventEmitter {
   startRegistryFetches() {
     this.registryFetch = setInterval(() => {
       this.fetchRegistry(err => {
-        if (err) this.logger.warn('Error fetching registries', err);
+        if (err) this.logger.warn('Error fetching registry', err);
       });
     }, this.config.eureka.registryFetchInterval);
   }
