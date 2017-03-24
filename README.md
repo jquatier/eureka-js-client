@@ -88,7 +88,7 @@ const instances = client.getInstancesByVipAddress('YOURSERVICEVIP');
 ```
 
 ### Providing Custom Request Middleware
-The client exposes the ability to modify the outgoing [request](https://www.npmjs.com/package/request) options object prior to a eureka call. This will be called on every eureka request, so it highly suggested that any long-lived external calls made in the middleware are cached or memoized. If the middleware returns anything other than an object, the eureka request will immediately fail and perform a retry if configured.
+The client exposes the ability to modify the outgoing [request](https://www.npmjs.com/package/request) options object prior to a eureka call. This is useful when adding authentication methods such as OAuth, or other custom headers. This will be called on every eureka request, so it highly suggested that any long-lived external calls made in the middleware are cached or memoized. If the middleware returns anything other than an object, the eureka request will immediately fail and perform a retry if configured.
 
 ```javascript
 // example using middleware to set-up HTTP authentication
