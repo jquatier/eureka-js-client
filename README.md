@@ -290,6 +290,7 @@ If you are using Spring Cloud you'll likely need the following settings:
 
   - Set `eureka.servicePath` in your config to `/eureka/apps/`.
   - Use the newer style of the configuration [here](#400-bad-request-errors-from-eureka-server) or Spring Cloud Eureka will throw a 500 error.
+  - Set `statusPageUrl` to a valid URL for your application, Spring Cloud [seems to require this](https://github.com/jquatier/eureka-js-client/issues/113) when the instance information is parsed.
   - Put single quotes around boolean `@enabled`. Unfortunately, a 500 error regarding parsing [seems to occur](https://github.com/jquatier/eureka-js-client/issues/63) without that.
 
 Below is an example configuration that should work with Spring Cloud Eureka server:
