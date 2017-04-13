@@ -32,7 +32,7 @@
     "request": "^2.60.0"
   },
   "devDependencies": {
-    "babel-core": "^6.4.5",
+    "babel-core": "^6.18.2",
     "babel-istanbul": "^0.11.0",
     "babel-preset-es2015": "^6.3.13",
     "babel-preset-es2015-loose": "^7.0.0",
