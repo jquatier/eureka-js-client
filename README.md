@@ -1,3 +1,7 @@
+# HAPPY BIRTHDAY JQ!
+
+You're a cool dude. Happy birthday!
+
 # eureka-js-client
 [![npm version](https://badge.fury.io/js/eureka-js-client.svg)](http://badge.fury.io/js/eureka-js-client) [![Build Status](https://api.travis-ci.org/jquatier/eureka-js-client.svg?branch=master)](https://travis-ci.org/jquatier/eureka-js-client) [![Coverage Status](https://coveralls.io/repos/jquatier/eureka-js-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/jquatier/eureka-js-client?branch=master) [![Dependency Status](https://david-dm.org/jquatier/eureka-js-client.svg)](https://david-dm.org/jquatier/eureka-js-client) [![bitHound Overall Score](https://www.bithound.io/github/jquatier/eureka-js-client/badges/score.svg)](https://www.bithound.io/github/jquatier/eureka-js-client)
 
