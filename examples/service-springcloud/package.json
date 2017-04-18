@@ -1,0 +1,17 @@
+{
+  "name": "node-service",
+  "version": "0.0.1",
+  "dependencies": {
+    "body-parser": "^1.15.0",
+    "eureka-js-client": "^3.0.0",
+    "express": "^4.13.4",
+    "lodash": "^4.6.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "service": "node service.js"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.1"
+  }
+}
