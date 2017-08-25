@@ -1,6 +1,6 @@
 import request from 'request';
 import async from 'async';
-import Logger from './Logger';
+import logger from './Logger';
 
 /*
   Utility class for pulling AWS metadata that Eureka requires when
@@ -9,7 +9,7 @@ import Logger from './Logger';
 export default class AwsMetadata {
 
   constructor(config = {}) {
-    this.logger = config.logger || new Logger();
+    this.logger = config.logger || logger;
     this.host = config.host || '169.254.169.254';
   }
 
