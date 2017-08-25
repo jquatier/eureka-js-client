@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
 import AwsMetadata from './AwsMetadata';
 import ConfigClusterResolver from './ConfigClusterResolver';
 import DnsClusterResolver from './DnsClusterResolver';
-import Logger from './Logger';
+import logger from './Logger';
 import defaultConfig from './defaultConfig';
 
 function noop() {}
@@ -47,7 +47,7 @@ export default class Eureka extends EventEmitter {
   constructor(config = {}) {
     super();
     // Allow passing in a custom logger:
-    this.logger = config.logger || new Logger();
+    this.logger = config.logger || logger;
 
     this.logger.debug('initializing eureka client');
 

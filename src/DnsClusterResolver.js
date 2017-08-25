@@ -2,7 +2,7 @@ import dns from 'dns';
 import async from 'async';
 import shuffle from 'lodash/shuffle';
 import xor from 'lodash/xor';
-import Logger from './Logger';
+import logger from './Logger';
 
 function noop() {}
 
@@ -14,8 +14,8 @@ function noop() {}
   Naming convention: txt.<REGION>.<HOST>
  */
 export default class DnsClusterResolver {
-  constructor(config, logger) {
-    this.logger = logger || new Logger();
+  constructor(config, customLogger) {
+    this.logger = customLogger || logger;
     this.serverList = undefined;
     this.config = config;
     if (!this.config.eureka.ec2Region) {

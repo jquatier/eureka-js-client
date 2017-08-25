@@ -1,12 +1,12 @@
-import Logger from './Logger';
+import logger from './Logger';
 
 /*
   Locates a Eureka host using static configuration. Configuration can either be
   done using a simple host and port, or a map of serviceUrls.
  */
 export default class ConfigClusterResolver {
-  constructor(config, logger) {
-    this.logger = logger || new Logger();
+  constructor(config, customLogger) {
+    this.logger = customLogger || logger;
     this.config = config;
     this.serviceUrls = this.buildServiceUrls();
   }
