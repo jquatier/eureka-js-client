@@ -680,11 +680,13 @@ describe('Eureka client', () => {
       config = makeConfig();
       client = new Eureka(config);
       sinon.stub(client, 'transformRegistry');
+      sinon.stub(client, 'handleDelta');
     });
 
     afterEach(() => {
       request.get.restore();
       client.transformRegistry.restore();
+      client.handleDelta.restore();
     });
 
     it('should should trigger registryUpdated event', () => {
@@ -709,19 +711,57 @@ describe('Eureka client', () => {
       expect(registryCb).to.have.been.calledWithMatch(null);
     });
 
+    it('should call registry URI for delta', () => {
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, '{ "applications": {} }');
+      const registryCb = sinon.spy();
+      client.config.shouldUseDelta = true;
+      client.hasFullRegistry = true;
+      client.fetchRegistry(registryCb);
+
+      expect(request.get).to.have.been.calledWithMatch({
+        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
+        uri: 'delta',
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(registryCb).to.have.been.calledWithMatch(null);
+    });
+
     it('should throw error for non-200 response', () => {
       sinon.stub(request, 'get').yields(null, { statusCode: 500 }, null);
       const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
       expect(registryCb).to.have.been.calledWithMatch({
-        message: 'Unable to retrieve registry from Eureka server',
+        message: 'Unable to retrieve full registry from Eureka server',
+      });
+    });
+
+    it('should throw error for non-200 response for delta', () => {
+      sinon.stub(request, 'get').yields(null, { statusCode: 500 }, null);
+      const registryCb = sinon.spy();
+      client.config.shouldUseDelta = true;
+      client.hasFullRegistry = true;
+      client.fetchRegistry(registryCb);
+
+      expect(registryCb).to.have.been.calledWithMatch({
+        message: 'Unable to retrieve delta registry from Eureka server',
       });
     });
 
     it('should throw error for request error', () => {
       sinon.stub(request, 'get').yields(new Error('request error'), null, null);
       const registryCb = sinon.spy();
+      client.fetchRegistry(registryCb);
+
+      expect(registryCb).to.have.been.calledWithMatch({ message: 'request error' });
+    });
+
+    it('should throw error for request error for delta request', () => {
+      sinon.stub(request, 'get').yields(new Error('request error'), null, null);
+      const registryCb = sinon.spy();
+      client.config.shouldUseDelta = true;
+      client.hasFullRegistry = true;
       client.fetchRegistry(registryCb);
 
       expect(registryCb).to.have.been.calledWithMatch({ message: 'request error' });
@@ -734,8 +774,18 @@ describe('Eureka client', () => {
 
       expect(registryCb).to.have.been.calledWith(new SyntaxError());
     });
-  });
 
+    it('should throw error on invalid JSON for delta request', () => {
+      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, '{ blah');
+      const registryCb = sinon.spy();
+      client.config.shouldUseDelta = true;
+      client.hasFullRegistry = true;
+      client.fetchRegistry(registryCb);
+
+      expect(registryCb).to.have.been.calledWith(new SyntaxError());
+    });
+  });
+  
   describe('transformRegistry()', () => {
     let client;
     let config;
@@ -743,6 +793,8 @@ describe('Eureka client', () => {
     let instance1;
     let instance2;
     let instance3;
+    let instance4;
+    let instance5;
     let app1;
     let app2;
     let app3;
@@ -751,12 +803,15 @@ describe('Eureka client', () => {
       registry = {
         applications: { application: {} },
       };
-      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: 'vip1', status: 'UP' };
-      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2', status: 'UP' };
-      instance3 = { host: '127.0.0.2', port: 2000, vipAddress: 'vip2', status: 'UP' };
+      instance1 = { hostName: '127.0.0.1', port: { $: 1000 }, app: 'theapp', vipAddress: 'vip1', status: 'UP' };
+      instance2 = { hostName: '127.0.0.2', port: { $: 2000 }, app: 'theapptwo', vipAddress: 'vip2', status: 'UP' };
+      instance3 = { hostName: '127.0.0.3', port: { $: 2000 }, app: 'theapp', vipAddress: 'vip2', status: 'UP' };
+      instance4 = { hostName: '127.0.0.4', port: { $: 2000 }, app: 'theappthree', vipAddress: 'vip3', status: 'UP' };
+      instance5 = { hostName: '127.0.0.5', port: { $: 2000 }, app: 'theappthree', vipAddress: 'vip2', status: 'UP' };
+
       app1 = { name: 'theapp', instance: instance1 };
       app2 = { name: 'theapptwo', instance: [instance2, instance3] };
-      app3 = { name: 'theappthree', instance: [instance1, instance3] };
+      app3 = { name: 'theappthree', instance: [instance5, instance4] };
       client = new Eureka(config);
     });
 
@@ -777,7 +832,7 @@ describe('Eureka client', () => {
     it('should transform a registry with two or more apps', () => {
       registry.applications.application = [app1, app2];
       client.transformRegistry(registry);
-      expect(client.cache.app[app2.name.toUpperCase()].length).to.equal(2);
+      expect(client.cache.app[app1.name.toUpperCase()].length).to.equal(2);
       expect(client.cache.vip[instance2.vipAddress].length).to.equal(2);
     });
 
@@ -785,8 +840,8 @@ describe('Eureka client', () => {
       registry.applications.application = [app3];
       client.transformRegistry(registry);
       expect(client.cache.app[app3.name.toUpperCase()].length).to.equal(2);
-      expect(client.cache.vip[instance1.vipAddress].length).to.equal(1);
-      expect(client.cache.vip[instance3.vipAddress].length).to.equal(1);
+      expect(client.cache.vip[instance5.vipAddress].length).to.equal(1);
+      expect(client.cache.vip[instance4.vipAddress].length).to.equal(1);
     });
   });
 
@@ -809,11 +864,11 @@ describe('Eureka client', () => {
       client = new Eureka(config);
       theVip = 'theVip';
       multiVip = 'fooVip,barVip';
-      instance1 = { host: '127.0.0.1', port: 1000, vipAddress: theVip, status: 'UP' };
-      instance2 = { host: '127.0.0.2', port: 2000, vipAddress: theVip, status: 'UP' };
-      instance3 = { host: '127.0.0.2', port: 2000, vipAddress: multiVip, status: 'UP' };
-      instance4 = { host: '127.0.0.2', port: 2000, vipAddress: void 0, status: 'UP' };
-      downInstance = { host: '127.0.0.2', port: 2000, vipAddress: theVip, status: 'DOWN' };
+      instance1 = { hostName: '127.0.0.1', port: 1000, vipAddress: theVip, app: 'theapp', status: 'UP' };
+      instance2 = { hostName: '127.0.0.2', port: 2000, vipAddress: theVip, app: 'theapp', status: 'UP' };
+      instance3 = { hostName: '127.0.0.5', port: 2000, vipAddress: multiVip, app: 'theapp', status: 'UP' };
+      instance4 = { hostName: '127.0.0.6', port: 2000, vipAddress: void 0, app: 'theapp', status: 'UP' };
+      downInstance = { hostName: '127.0.0.7', port: 2000, app: 'theapp', vipAddress: theVip, status: 'DOWN' };
       app = { name: 'theapp' };
       cache = { app: {}, vip: {} };
     });
@@ -1048,6 +1103,118 @@ describe('Eureka client', () => {
         expect(requestStub.args[1][0]).to.have.property('baseUrl', 'http://serverB');
         done();
       });
+    });
+  });
+
+
+  describe('handleDelta()', () => {
+    let client;
+    beforeEach(() => {
+      const config = makeConfig({ shouldUseDelta: true });
+      client = new Eureka(config);
+    });
+
+    it('should add instances', () => {
+      const appDelta = [
+        {
+          instances: [
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },
+          ],
+        },
+      ];
+
+      client.handleDelta(client.cache, appDelta);
+      expect(client.cache.vip.thevip).to.have.length(1);
+      expect(client.cache.app.THEAPP).to.have.length(1);
+    });
+
+    it('should handle duplicate instances on add', () => {
+      const appDelta = [
+        {
+          instances: [
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },            
+          ],
+        },
+      ];
+
+      client.handleDelta(client.cache, appDelta);
+      expect(client.cache.vip.thevip).to.have.length(1);
+      expect(client.cache.app.THEAPP).to.have.length(1);
+    });
+
+    it('should modify instances', () => {
+      const appDelta = [
+        {
+          instances: [
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'MODIFIED', newProp: 'foo' },
+          ],
+        },
+      ];
+      const original = { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'MODIFIED' };
+      client.cache = {
+        app: { THEAPP: [original] },
+        vip: { thevip: [original] },
+      };
+
+      client.handleDelta(client.cache, appDelta);
+      expect(client.cache.vip.thevip).to.have.length(1);
+      expect(client.cache.app.THEAPP).to.have.length(1);
+      expect(client.cache.vip.thevip[0]).to.have.property('newProp');
+      expect(client.cache.app.THEAPP[0]).to.have.property('newProp');
+    });
+
+    it('should add if instance doesnt exist when modifying', () => {
+      const appDelta = [
+        {
+          instances: [
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'MODIFIED', newProp: 'foo' },
+          ],
+        },
+      ];
+
+      client.handleDelta(client.cache, appDelta);
+      expect(client.cache.vip.thevip).to.have.length(1);
+      expect(client.cache.app.THEAPP).to.have.length(1);
+      expect(client.cache.vip.thevip[0]).to.have.property('newProp');
+      expect(client.cache.app.THEAPP[0]).to.have.property('newProp');
+    });
+
+    it('should delete instances', () => {
+      const appDelta = [
+        {
+          instances: [
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'DELETED', newProp: 'foo' },
+          ],
+        },
+      ];
+      const original = { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' };
+      client.cache = {
+        app: { THEAPP: [original] },
+        vip: { thevip: [original] },
+      };
+
+      client.handleDelta(client.cache, appDelta);
+      expect(client.cache.vip.thevip).to.have.length(0);
+      expect(client.cache.app.THEAPP).to.have.length(0);
+    });
+
+    it('should not delete instances if they do not exist', () => {
+      const appDelta = [
+        {
+          instances: [
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'DELETED', newProp: 'foo' },
+          ],
+        },
+      ];
+      client.cache = {
+        app: { THEAPP: [] },
+        vip: { thevip: [] },
+      };
+
+      client.handleDelta(client.cache, appDelta);
+      expect(client.cache.vip.thevip).to.have.length(0);
+      expect(client.cache.app.THEAPP).to.have.length(0);
     });
   });
 });
