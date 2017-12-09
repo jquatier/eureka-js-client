@@ -1,7 +1,7 @@
 // Default configuration values:
 export default {
   requestMiddleware: (request, done) => done(request),
-  shoudlUseDelta: false,
+  shouldUseDelta: false,
   eureka: {
     heartbeatInterval: 30000,
     registryFetchInterval: 30000,
