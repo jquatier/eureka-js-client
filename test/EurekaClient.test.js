@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-expressions */
+/* eslint-disable no-unused-expressions, max-len */
 import sinon from 'sinon';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
@@ -785,7 +785,7 @@ describe('Eureka client', () => {
       expect(registryCb).to.have.been.calledWith(new SyntaxError());
     });
   });
-  
+
   describe('transformRegistry()', () => {
     let client;
     let config;
@@ -1133,7 +1133,7 @@ describe('Eureka client', () => {
         {
           instances: [
             { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },
-            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },            
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },
           ],
         },
       ];
