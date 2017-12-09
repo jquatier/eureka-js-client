@@ -193,6 +193,7 @@ option | default value | description
 ---- | --- | ---
 `requestMiddleware` | noop | Custom middleware function to modify the outgoing [request](https://www.npmjs.com/package/request) to eureka
 `logger` | console logging | logger implementation for the client to use
+`shouldUseDelta` | false | Experimental mode to fetch deltas from eureka instead of full registry on update
 `eureka.maxRetries` | `3` | Number of times to retry all requests to eureka
 `eureka.requestRetryDelay` | `500` | milliseconds to wait between retries. This will be multiplied by the # of failed retries.
 `eureka.heartbeatInterval` | `30000` | milliseconds to wait between heartbeats
