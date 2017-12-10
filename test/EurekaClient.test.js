@@ -815,6 +815,12 @@ describe('Eureka client', () => {
       client = new Eureka(config);
     });
 
+    it('should noop if empty registry', () => {
+      client.transformRegistry(undefined);
+      expect(client.cache.vip).to.be.empty;
+      expect(client.cache.app).to.be.empty;
+    });
+
     it('should return clear the cache if no applications exist', () => {
       registry.applications.application = null;
       client.transformRegistry(registry);
