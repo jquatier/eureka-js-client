@@ -615,6 +615,14 @@ describe('Eureka client', () => {
       }
       expect(badConfig).to.throw(TypeError);
     });
+
+    it('should throw an exception with an invalid request middleware', () => {
+      function badConfig() {
+        config.requestMiddleware = 'invalid middleware';
+        return new Eureka(config);
+      }
+      expect(badConfig).to.throw(TypeError);
+    });
   });
 
   describe('getInstancesByAppId()', () => {
