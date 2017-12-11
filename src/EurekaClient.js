@@ -359,7 +359,7 @@ export default class Eureka extends EventEmitter {
           return callback(ex);
         }
         this.emit('registryUpdated');
-        this.shouldUseDelta = true;
+        this.hasFullRegistry = true;
         return callback(null);
       } else if (error) {
         this.logger.warn('Error fetching registry', error);
