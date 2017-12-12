@@ -385,7 +385,7 @@ export default class Eureka extends EventEmitter {
         try {
           const jsonBody = JSON.parse(body);
           applications = jsonBody.applications.application;
-          this.handleDelta(applications);
+          this.handleDelta(this.cache, applications);
           return callback(null);
         } catch (ex) {
           return callback(ex);
@@ -454,8 +454,7 @@ export default class Eureka extends EventEmitter {
   handleDelta(cache, appDelta) {
     const delta = normalizeDelta(appDelta);
     delta.forEach((app) => {
-      app.instances.forEach((instance) => {
-        if (!this.validateInstance(instance)) return;
+      app.instance.forEach((instance) => {
         switch (instance.actionType) {
           case 'ADDED': this.addInstance(cache, instance); break;
           case 'MODIFIED': this.modifyInstance(cache, instance); break;
@@ -467,6 +466,7 @@ export default class Eureka extends EventEmitter {
   }
 
   addInstance(cache, instance) {
+    if (!this.validateInstance(instance)) return;
     const vipAddresses = this.splitVipAddress(instance.vipAddress);
     const appName = instance.app.toUpperCase();
     vipAddresses.forEach((vipAddress) => {
@@ -484,6 +484,7 @@ export default class Eureka extends EventEmitter {
   }
 
   modifyInstance(cache, instance) {
+    if (!this.validateInstance(instance)) return;
     const vipAddresses = this.splitVipAddress(instance.vipAddress);
     const appName = instance.app.toUpperCase();
     vipAddresses.forEach((vipAddress) => {

@@ -1131,7 +1131,7 @@ describe('Eureka client', () => {
     it('should add instances', () => {
       const appDelta = [
         {
-          instances: [
+          instance: [
             { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },
           ],
         },
@@ -1145,7 +1145,7 @@ describe('Eureka client', () => {
     it('should handle duplicate instances on add', () => {
       const appDelta = [
         {
-          instances: [
+          instance: [
             { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },
             { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'ADDED' },
           ],
@@ -1160,7 +1160,7 @@ describe('Eureka client', () => {
     it('should modify instances', () => {
       const appDelta = [
         {
-          instances: [
+          instance: [
             { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'MODIFIED', newProp: 'foo' },
           ],
         },
@@ -1181,7 +1181,7 @@ describe('Eureka client', () => {
     it('should add if instance doesnt exist when modifying', () => {
       const appDelta = [
         {
-          instances: [
+          instance: [
             { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'MODIFIED', newProp: 'foo' },
           ],
         },
@@ -1197,7 +1197,7 @@ describe('Eureka client', () => {
     it('should delete instances', () => {
       const appDelta = [
         {
-          instances: [
+          instance: [
             { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'DELETED', newProp: 'foo' },
           ],
         },
@@ -1216,7 +1216,7 @@ describe('Eureka client', () => {
     it('should not delete instances if they do not exist', () => {
       const appDelta = [
         {
-          instances: [
+          instance: [
             { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'DELETED', newProp: 'foo' },
           ],
         },
