@@ -6,10 +6,9 @@ services:
   - docker
 
 node_js:
-  - "0.10"
-  - "0.12"
   - "4"
   - "6"
+  - "8"
 
 script:
   - npm run test && npm run integration

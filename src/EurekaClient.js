@@ -1,7 +1,8 @@
 import request from 'request';
 import fs from 'fs';
 import yaml from 'js-yaml';
-import merge from 'lodash/merge';
+import { merge, findIndex } from 'lodash';
+import { normalizeDelta, findInstance } from './deltaUtils';
 import path from 'path';
 import { series, waterfall } from 'async';
 import { EventEmitter } from 'events';
@@ -68,6 +69,8 @@ export default class Eureka extends EventEmitter {
     this.validateConfig(this.config);
 
     this.requestMiddleware = this.config.requestMiddleware;
+
+    this.hasFullRegistry = false;
 
     if (this.amazonDataCenter) {
       this.metadataClient = new AwsMetadata({
@@ -328,9 +331,20 @@ export default class Eureka extends EventEmitter {
   }
 
   /*
-    Retrieves all applications registered with the Eureka server
+    Orchestrates fetching registry
    */
   fetchRegistry(callback = noop) {
+    if (this.config.shouldUseDelta && this.hasFullRegistry) {
+      this.fetchDelta(callback);
+    } else {
+      this.fetchFullRegistry(callback);
+    }
+  }
+
+  /*
+    Retrieves all applications registered with the Eureka server
+  */
+  fetchFullRegistry(callback = noop) {
     this.eurekaRequest({
       uri: '',
       headers: {
@@ -338,22 +352,51 @@ export default class Eureka extends EventEmitter {
       },
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
-        this.logger.debug('retrieved registry successfully');
+        this.logger.debug('retrieved full registry successfully');
         try {
           this.transformRegistry(JSON.parse(body));
         } catch (ex) {
           return callback(ex);
         }
         this.emit('registryUpdated');
+        this.hasFullRegistry = true;
         return callback(null);
       } else if (error) {
         this.logger.warn('Error fetching registry', error);
         return callback(error);
       }
-      callback(new Error('Unable to retrieve registry from Eureka server'));
+      callback(new Error('Unable to retrieve full registry from Eureka server'));
     });
   }
 
+    /*
+    Retrieves all applications registered with the Eureka server
+   */
+  fetchDelta(callback = noop) {
+    this.eurekaRequest({
+      uri: 'delta',
+      headers: {
+        Accept: 'application/json',
+      },
+    }, (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        this.logger.debug('retrieved delta successfully');
+        let applications;
+        try {
+          const jsonBody = JSON.parse(body);
+          applications = jsonBody.applications.application;
+          this.handleDelta(this.cache, applications);
+          return callback(null);
+        } catch (ex) {
+          return callback(ex);
+        }
+      } else if (error) {
+        this.logger.warn('Error fetching delta registry', error);
+        return callback(error);
+      }
+      callback(new Error('Unable to retrieve delta registry from Eureka server'));
+    });
+  }
   /*
     Transforms the given registry and caches the registry locally
    */
@@ -382,24 +425,11 @@ export default class Eureka extends EventEmitter {
    */
   transformApp(app, cache) {
     if (app.instance.length) {
-      const instances = app.instance.filter((instance) => (this.validateInstance(instance)));
-      cache.app[app.name.toUpperCase()] = instances;
-      instances.forEach((inst) => {
-        const vipAddresses = this.splitVipAddress(inst.vipAddress);
-        vipAddresses.forEach((vipAddress) => {
-          if (!cache.vip[vipAddress]) {
-            cache.vip[vipAddress] = [];
-          }
-          cache.vip[vipAddress].push(inst);
-        });
-      });
+      app.instance
+        .filter(this.validateInstance.bind(this))
+        .forEach((inst) => this.addInstance(cache, inst));
     } else if (this.validateInstance(app.instance)) {
-      const instances = [app.instance];
-      const vipAddresses = this.splitVipAddress(app.instance.vipAddress);
-      vipAddresses.forEach((vipAddress) => {
-        cache.vip[vipAddress] = instances;
-      });
-      cache.app[app.name.toUpperCase()] = instances;
+      this.addInstance(cache, app.instance);
     }
   }
 
@@ -419,6 +449,63 @@ export default class Eureka extends EventEmitter {
     }
 
     return vipAddress.split(',');
+  }
+
+  handleDelta(cache, appDelta) {
+    const delta = normalizeDelta(appDelta);
+    delta.forEach((app) => {
+      app.instance.forEach((instance) => {
+        switch (instance.actionType) {
+          case 'ADDED': this.addInstance(cache, instance); break;
+          case 'MODIFIED': this.modifyInstance(cache, instance); break;
+          case 'DELETED': this.deleteInstance(cache, instance); break;
+          default: this.logger.warn('Unknown delta actionType', instance.actionType); break;
+        }
+      });
+    });
+  }
+
+  addInstance(cache, instance) {
+    if (!this.validateInstance(instance)) return;
+    const vipAddresses = this.splitVipAddress(instance.vipAddress);
+    const appName = instance.app.toUpperCase();
+    vipAddresses.forEach((vipAddress) => {
+      const alreadyContains = findIndex(cache.vip[vipAddress], findInstance(instance)) > -1;
+      if (alreadyContains) return;
+      if (!cache.vip[vipAddress]) {
+        cache.vip[vipAddress] = [];
+      }
+      cache.vip[vipAddress].push(instance);
+    });
+    if (!cache.app[appName]) cache.app[appName] = [];
+    const alreadyContains = findIndex(cache.app[appName], findInstance(instance)) > -1;
+    if (alreadyContains) return;
+    cache.app[appName].push(instance);
+  }
+
+  modifyInstance(cache, instance) {
+    if (!this.validateInstance(instance)) return;
+    const vipAddresses = this.splitVipAddress(instance.vipAddress);
+    const appName = instance.app.toUpperCase();
+    vipAddresses.forEach((vipAddress) => {
+      const index = findIndex(cache.vip[vipAddress], findInstance(instance));
+      if (index > -1) cache.vip[vipAddress].splice(index, 1, instance);
+      else this.addInstance(cache, instance);
+    });
+    const index = findIndex(cache.app[appName], findInstance(instance));
+    if (index > -1) cache.app[appName].splice(cache.vip[instance.vipAddress], 1, instance);
+    else this.addInstance(cache, instance);
+  }
+
+  deleteInstance(cache, instance) {
+    const vipAddresses = this.splitVipAddress(instance.vipAddress);
+    const appName = instance.app.toUpperCase();
+    vipAddresses.forEach((vipAddress) => {
+      const index = findIndex(cache.vip[vipAddress], findInstance(instance));
+      if (index > -1) cache.vip[vipAddress].splice(index, 1);
+    });
+    const index = findIndex(cache.app[appName], findInstance(instance));
+    if (index > -1) cache.app[appName].splice(cache.vip[instance.vipAddress], 1);
   }
 
   /*
