@@ -10,10 +10,34 @@ export default class AwsMetadata {
 
   constructor(config = {}) {
     this.logger = config.logger || new Logger();
-    this.host = config.host || '169.254.169.254';
+    this.ecs = !!config.ecs;
+    this.host = this.ecs ? '169.254.170.2' : '169.254.169.254';
   }
 
   fetchMetadata(resultsCallback) {
+    return this.ecs
+      ? this.fetchEcsMetadata(resultsCallback)
+      : this.fetchEc2Metadata(resultsCallback);
+  }
+
+  fetchEcsMetadata(resultsCallback) {
+    this.lookupMetadataKey('', (error, results) => {
+      const resultsObj = JSON.parse(results);
+      const metadata = resultsObj.Containers.find(container => (container.Type && container.Type === 'NORMAL'));
+      this.logger.debug(`Found Task ImageId(${metadata.ImageID}) DockerId(${metadata.DockerId}).`);
+      const ip = metadata.Networks[0].IPv4Addresses[0];
+      this.logger.debug('Found Task IP', ip);
+      resultsCallback({
+        'instance-id': metadata.DockerId,
+        'instance-type': metadata.DockerName,
+        'image-id': metadata.ImageID,
+        'public-ipv4': ip,
+        'public-hostname': ip,
+      });
+    });
+  }
+
+  fetchEc2Metadata(resultsCallback) {
     async.parallel({
       'ami-id': callback => {
         this.lookupMetadataKey('ami-id', callback);
@@ -64,7 +88,9 @@ export default class AwsMetadata {
 
   lookupMetadataKey(key, callback) {
     request.get({
-      url: `http://${this.host}/latest/meta-data/${key}`,
+      url: this.ecs
+        ? `http://${this.host}/v2/metadata/${key}`
+        : `http://${this.host}/latest/meta-data/${key}`,
     }, (error, response, body) => {
       if (error) {
         this.logger.error('Error requesting metadata key', error);

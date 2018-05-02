@@ -75,6 +75,7 @@ export default class Eureka extends EventEmitter {
     if (this.amazonDataCenter) {
       this.metadataClient = new AwsMetadata({
         logger: this.logger,
+        ecs: this.config.instance.dataCenterInfo.ecs,
       });
     }
 
