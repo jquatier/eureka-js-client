@@ -2,7 +2,8 @@
   "extends": "airbnb-base",
   "rules": {
     "no-param-reassign": [2, {"props": false}],
-    "consistent-return": 0
+    "consistent-return": 0,
+    "max-len": 1
   },
   "env": {
     "mocha": true

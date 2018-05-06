@@ -22,18 +22,40 @@ export default class AwsMetadata {
 
   fetchEcsMetadata(resultsCallback) {
     this.lookupMetadataKey('', (error, results) => {
-      const resultsObj = JSON.parse(results);
-      const metadata = resultsObj.Containers.find(container => (container.Type && container.Type === 'NORMAL'));
-      this.logger.debug(`Found Task ImageId(${metadata.ImageID}) DockerId(${metadata.DockerId}).`);
-      const ip = metadata.Networks[0].IPv4Addresses[0];
-      this.logger.debug('Found Task IP', ip);
-      resultsCallback({
-        'instance-id': metadata.DockerId,
-        'instance-type': metadata.DockerName,
-        'image-id': metadata.ImageID,
-        'public-ipv4': ip,
-        'public-hostname': ip,
-      });
+      try {
+        const resultsObj = JSON.parse(results);
+
+        const metadata = resultsObj.Containers.find(container => (container.Type && container.Type === 'NORMAL'));
+        this.logger.debug(`Found Task ImageId(${metadata.ImageID}) DockerId(${metadata.DockerId}).`);
+
+        const privateIp = metadata.Networks[0].IPv4Addresses[0];
+        this.logger.debug('Found Task IP', privateIp);
+
+        const taskArn = metadata.Labels['com.amazonaws.ecs.task-arn'];
+        this.logger.debug('Found Task ARN', taskArn);
+
+        const taskInfo = taskArn.match(/arn:aws:ecs:(\w+-\w+-\d+):(\d+):/);
+        const az = taskInfo[1];
+        this.logger.debug('Found Task AZ', az);
+        const accountId = taskInfo[2];
+        this.logger.debug('Found Task AccountId', accountId);
+
+        // assumes privateIp networking. PublicIp is just for proper healthcheckUrl.
+        resultsCallback({
+          accountId,
+          'instance-id': metadata.DockerId,
+          'instance-type': metadata.DockerName,
+          'image-id': metadata.ImageID,
+          'private-ipv4': privateIp,
+          'private-hostname': privateIp,
+          'availability-zone': az,
+          'public-ipv4': privateIp,
+          'public-hostname': privateIp,
+        });
+      } catch (e) {
+        this.logger.error(e);
+        resultsCallback();
+      }
     });
   }
 
