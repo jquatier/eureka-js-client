@@ -3,6 +3,7 @@
   "version": "4.4.1",
   "description": "A JavaScript implementation the Netflix OSS service registry, Eureka.",
   "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "scripts": {
     "prepublish": "gulp",
     "test": "gulp test",
@@ -26,6 +27,8 @@
   },
   "homepage": "https://github.com/jquatier/eureka-js-client",
   "dependencies": {
+    "@types/node": "^10.5.2",
+    "@types/request": "^2.47.1",
     "async": "^2.0.1",
     "js-yaml": "^3.3.1",
     "lodash": "^4.13.1",
