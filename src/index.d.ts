@@ -3,7 +3,8 @@ import { EventEmitter } from 'events'
 
 class EurekaClient extends EventEmitter {
   /**
-   * Helper method to get the instance ID. If the datacenter is AWS, this will be the instance-id in the metadata. Else, it's the hostName.
+   * Helper method to get the instance ID. If the datacenter is AWS, this will be the instance-id in the metadata.
+   * Else, it's the hostName.
    */
   readonly instanceId: string
   /**
@@ -17,13 +18,13 @@ class EurekaClient extends EventEmitter {
    * Registers instance with Eureka, begins heartbeats, and fetches registry.
    * @param {(err: Error, ...rest: any[]) => void} callback
    */
-  start(callback: (err: Error, ...rest: any[]) => void)
+  start(callback: (err: Error, ...rest: any[]) => void): void
 
   /**
    * De-registers instance with Eureka, stops heartbeats / registry fetches.
    * @param {(err: Error, ...rest: any[]) => void} callback
    */
-  stop(callback: (err: Error, ...rest: any[]) => void)
+  stop(callback: (err: Error, ...rest: any[]) => void): void
 
   /**
    * Validates client configuration.
@@ -155,7 +156,10 @@ class EurekaClient extends EventEmitter {
    * @param {number} retryAttempt
    */
   eurekaRequest(
-    opts: RequestOptions, callback: (error: Error, response: Response, body: any) => void, retryAttempt?: number): void
+    opts: RequestOptions,
+    callback: (error: Error, response: Response, body: any) => void,
+    retryAttempt?: number,
+  ): void
 }
 
 interface Logger {
@@ -281,19 +285,14 @@ type PortWrapper = number | {
    * @return true if the port is enabled, false otherwise.
    */
   '@enabled': boolean,
-  $: number,
+  '$': number,
 }
-type InstanceStatus = 'UP' | 'DOWN' | 'STARTING' | 'OUT_OF_SERVICE' | 'UNKNOWN';
-type DataCenterInfo = {
-  '@class': 'com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo',
-  name: 'MyOwn',
-} | {
-  '@class': 'com.netflix.appinfo.AmazonInfo',
-  name: 'Amazon',
-} | {
-  '@class'?: string,
-  name: 'Netflix',
-}
+type InstanceStatus = 'UP' | 'DOWN' | 'STARTING' | 'OUT_OF_SERVICE' | 'UNKNOWN'
+
+type DataCenterInfoAmazon = { '@class': 'com.netflix.appinfo.AmazonInfo', name: 'Amazon' }
+type DataCenterInfoMyOwn = { '@class': 'com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo', name: 'MyOwn' }
+type DataCenterInfoNetflix = { name: 'Netflix' }
+type DataCenterInfo = DataCenterInfoMyOwn | DataCenterInfoNetflix | DataCenterInfoAmazon
 
 interface InstanceConfig {
   /**
@@ -442,11 +441,11 @@ interface Config {
   /**
    * Experimental mode to fetch deltas from eureka instead of full registry on update
    */
-  shouldUseDelta: boolean,
+  shouldUseDelta?: boolean,
   /**
    * logger implementation for the client to use
    */
-  logger: Logger
+  logger?: Logger
   /**
    * Configuration for Eureka.js client
    */
@@ -465,7 +464,7 @@ interface EurekaAppsResponse {
   versions__delta: string,
   apps__hashcode: string,
   applications: {
-    application: App[]
+    application: App[],
   }
 }
 
@@ -497,10 +496,10 @@ interface Cache {
   vip: { [vipAdress: string]: InstanceConfig },
 }
 
-const Eureka: EurekaClient
+const eureka: EurekaClient
 
 export {
-  Eureka,
+  eureka as Eureka,
   Config,
   ClientConfig,
   InstanceConfig,
@@ -510,6 +509,9 @@ export {
   PortWrapper,
   InstanceStatus,
   DataCenterInfo,
+  DataCenterInfoNetflix,
+  DataCenterInfoAmazon,
+  DataCenterInfoMyOwn,
   EurekaAppsResponse,
   App,
   EurekaDeltaResponse,
@@ -517,7 +519,7 @@ export {
 
   RequestOptions,
   Response,
-  EventEmitter
+  EventEmitter,
 }
 
 export default EurekaClient
