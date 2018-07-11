@@ -14,6 +14,11 @@ gulp.task('build', () => (
     .pipe(gulp.dest('lib'))
 ));
 
+gulp.task('tsc', () => (
+  gulp.src('src/**/*.ts')
+    .pipe(gulp.dest('lib'))
+));
+
 gulp.task('lint', () => (
   gulp.src(['src/**/*.js', 'test/**/*.js'])
     .pipe(eslint())
@@ -98,4 +103,4 @@ gulp.task('test:watch', () => (
   gulp.watch(['src/**/*.js', 'test/**/*.test.js'], ['test'])
 ));
 
-gulp.task('default', ['build']);
+gulp.task('default', ['build', 'tsc']);
