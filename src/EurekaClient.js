@@ -484,7 +484,6 @@ export default class Eureka extends EventEmitter {
   }
 
   modifyInstance(cache, instance) {
-    if (!this.validateInstance(instance)) return;
     const vipAddresses = this.splitVipAddress(instance.vipAddress);
     const appName = instance.app.toUpperCase();
     vipAddresses.forEach((vipAddress) => {

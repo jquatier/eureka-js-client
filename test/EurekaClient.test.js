@@ -1178,6 +1178,27 @@ describe('Eureka client', () => {
       expect(client.cache.app.THEAPP[0]).to.have.property('newProp');
     });
 
+    it('should modify instances even when status is not UP', () => {
+      const appDelta = [
+        {
+          instance: [
+            { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'DOWN', actionType: 'MODIFIED', newProp: 'foo' },
+          ],
+        },
+      ];
+      const original = { hostName: '127.0.0.1', port: { $: 1000 }, app: 'THEAPP', vipAddress: 'thevip', status: 'UP', actionType: 'MODIFIED' };
+      client.cache = {
+        app: { THEAPP: [original] },
+        vip: { thevip: [original] },
+      };
+
+      client.handleDelta(client.cache, appDelta);
+      expect(client.cache.vip.thevip).to.have.length(1);
+      expect(client.cache.app.THEAPP).to.have.length(1);
+      expect(client.cache.vip.thevip[0]).to.have.property('newProp');
+      expect(client.cache.app.THEAPP[0]).to.have.property('newProp');
+    });
+
     it('should add if instance doesnt exist when modifying', () => {
       const appDelta = [
         {
