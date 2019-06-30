@@ -527,8 +527,8 @@ export default class Eureka extends EventEmitter {
   addInstanceMetadata(callback = noop) {
     this.metadataClient.fetchMetadata(metadataResult => {
       this.config.instance.dataCenterInfo.metadata = merge(
-        this.config.instance.dataCenterInfo.metadata,
-        metadataResult
+        metadataResult,
+        this.config.instance.dataCenterInfo.metadata
       );
       const useLocal = this.config.eureka.useLocalMetadata;
       const preferIpAddress = this.config.eureka.preferIpAddress;
