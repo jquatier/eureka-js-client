@@ -28,6 +28,7 @@ const client = new Eureka({
   // application instance information
   instance: {
     app: 'jqservice',
+    instanceId: 'jqservice',
     hostName: 'localhost',
     ipAddr: '127.0.0.1',
     port: 8080,
