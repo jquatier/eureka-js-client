@@ -606,7 +606,7 @@ export default class Eureka extends EventEmitter {
       // Perform retry if request failed and we have attempts left
       const responseInvalid = response
         && response.statusCode
-        && String(response.statusCode)[0] === '5';
+        && response.statusCode >= 400;
 
       if ((error || responseInvalid) && retryAttempt < this.config.eureka.maxRetries) {
         const nextRetryDelay = this.config.eureka.requestRetryDelay * (retryAttempt + 1);
