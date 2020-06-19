@@ -1099,7 +1099,7 @@ describe('Eureka client', () => {
       const overrides = {
         eureka: {
           serviceUrls: {
-            default: ['http://serverA', 'http://serverB'],
+            default: ['http://serverA', 'http://serverB', 'http://serverC'],
           },
           maxRetries: 3,
           requestRetryDelay: 0,
@@ -1109,12 +1109,39 @@ describe('Eureka client', () => {
       const client = new Eureka(config);
       const requestStub = sinon.stub(request, 'get');
       requestStub.onCall(0).yields(null, { statusCode: 500 }, null);
-      requestStub.onCall(1).yields(null, { statusCode: 200 }, null);
+      requestStub.onCall(1).yields(null, { statusCode: 400 }, null);
+      requestStub.onCall(2).yields(null, { statusCode: 200 }, null);
       client.eurekaRequest({ uri: '/path' }, (error) => {
         expect(error).to.be.null;
         expect(requestStub).to.be.calledTwice;
         expect(requestStub.args[0][0]).to.have.property('baseUrl', 'http://serverA');
         expect(requestStub.args[1][0]).to.have.property('baseUrl', 'http://serverB');
+        done();
+      });
+    });
+    it('should retry next server on configured request failure', (done) => {
+      const overrides = {
+        eureka: {
+          serviceUrls: {
+            default: ['http://serverA', 'http://serverB', 'http://serverC'],
+          },
+          maxRetries: 3,
+          requestRetryDelay: 0,
+          retryableStatusCodes: "400-404,500-504"
+        },
+      };
+      const config = makeConfig(overrides);
+      const client = new Eureka(config);
+      const requestStub = sinon.stub(request, 'get');
+      requestStub.onCall(0).yields(null, { statusCode: 500 }, null);
+      requestStub.onCall(1).yields(null, { statusCode: 400 }, null);
+      requestStub.onCall(2).yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest({ uri: '/path' }, (error) => {
+        expect(error).to.be.null;
+        expect(requestStub).to.be.calledThrice;
+        expect(requestStub.args[0][0]).to.have.property('baseUrl', 'http://serverA');
+        expect(requestStub.args[1][0]).to.have.property('baseUrl', 'http://serverB');
+        expect(requestStub.args[2][0]).to.have.property('baseUrl', 'http://serverC');
         done();
       });
     });
