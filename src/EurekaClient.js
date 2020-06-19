@@ -606,7 +606,7 @@ export default class Eureka extends EventEmitter {
       // Perform retry if request failed and we have attempts left
       const responseInvalid = response
         && response.statusCode
-        && response.statusCode >= 400;
+        && this.shouldRetry(response.statusCode)
 
       if ((error || responseInvalid) && retryAttempt < this.config.eureka.maxRetries) {
         const nextRetryDelay = this.config.eureka.requestRetryDelay * (retryAttempt + 1);
@@ -622,4 +622,14 @@ export default class Eureka extends EventEmitter {
     });
   }
 
+  shouldRetry(statusCode) {
+    //retryableStatusCodes is a comma separated list of ranges (ie 401-403,500-502)
+    //so go through each range and check if the status code falls inside of any of them
+    const retryableRanges = this.config.eureka.retryableStatusCodes.split(",")
+    return retryableRanges
+      .some(range => {
+        const [lower, upper] = range.split("-")
+        return (statusCode >= parseInt(lower) && statusCode <= parseInt(upper))
+      })
+  }
 }

@@ -7,6 +7,7 @@ export default {
     registryFetchInterval: 30000,
     maxRetries: 3,
     requestRetryDelay: 500,
+    retryableStatusCodes: "500-599",
     fetchRegistry: true,
     filterUpInstances: true,
     servicePath: '/eureka/v2/apps/',
