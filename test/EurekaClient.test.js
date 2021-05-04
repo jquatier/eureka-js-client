@@ -2,7 +2,7 @@
 import sinon from 'sinon';
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
-import request from 'request';
+import got from 'got';
 import { EventEmitter } from 'events';
 import { join } from 'path';
 import merge from 'lodash/merge';
@@ -363,10 +363,10 @@ describe('Eureka client', () => {
     });
 
     afterEach(() => {
-      request.post.restore();
+      got.post.restore();
     });
     it('should trigger register event', () => {
-      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
+      sinon.stub(got, 'post').yields(null, { statusCode: 204 }, null);
       const eventSpy = sinon.spy();
       client.on('registered', eventSpy);
       client.register();
@@ -374,12 +374,12 @@ describe('Eureka client', () => {
     });
 
     it('should call register URI', () => {
-      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
+      sinon.stub(got, 'post').yields(null, { statusCode: 204 }, null);
       const registerCb = sinon.spy();
       client.register(registerCb);
 
-      expect(request.post).to.have.been.calledWithMatch({
-        body: {
+      expect(got.post).to.have.been.calledWithMatch('app', {
+        json: {
           instance: {
             app: 'app',
             hostName: 'myhost',
@@ -389,16 +389,15 @@ describe('Eureka client', () => {
             vipAddress: '1.2.2.3',
           },
         },
-        json: true,
-        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        uri: 'app',
+        responseType: 'json',
+        prefixUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
       });
 
       expect(registerCb).to.have.been.calledWithMatch(null);
     });
 
     it('should throw error for non-204 response', () => {
-      sinon.stub(request, 'post').yields(null, { statusCode: 500 }, null);
+      sinon.stub(got, 'post').yields(null, { statusCode: 500 }, null);
       const registerCb = sinon.spy();
       client.register(registerCb);
 
@@ -408,7 +407,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for request error', () => {
-      sinon.stub(request, 'post').yields(new Error('request error'), null, null);
+      sinon.stub(got, 'post').yields(new Error('request error'), null, null);
       const registerCb = sinon.spy();
       client.register(registerCb);
 
@@ -425,11 +424,11 @@ describe('Eureka client', () => {
     });
 
     afterEach(() => {
-      request.delete.restore();
+      got.delete.restore();
     });
 
     it('should should trigger deregister event', () => {
-      sinon.stub(request, 'delete').yields(null, { statusCode: 200 }, null);
+      sinon.stub(got, 'delete').yields(null, { statusCode: 200 }, null);
       const eventSpy = sinon.spy();
       client.on('deregistered', eventSpy);
       client.register();
@@ -437,20 +436,19 @@ describe('Eureka client', () => {
     });
 
     it('should call deregister URI', () => {
-      sinon.stub(request, 'delete').yields(null, { statusCode: 200 }, null);
+      sinon.stub(got, 'delete').yields(null, { statusCode: 200 }, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
-      expect(request.delete).to.have.been.calledWithMatch({
-        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        uri: 'app/myhost',
+      expect(got.delete).to.have.been.calledWithMatch('app/myhost', {
+        prefixUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
       });
 
       expect(deregisterCb).to.have.been.calledWithMatch(null);
     });
 
     it('should throw error for non-200 response', () => {
-      sinon.stub(request, 'delete').yields(null, { statusCode: 500 }, null);
+      sinon.stub(got, 'delete').yields(null, { statusCode: 500 }, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
@@ -460,7 +458,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for request error', () => {
-      sinon.stub(request, 'delete').yields(new Error('request error'), null, null);
+      sinon.stub(got, 'delete').yields(new Error('request error'), null, null);
       const deregisterCb = sinon.spy();
       client.deregister(deregisterCb);
 
@@ -477,21 +475,20 @@ describe('Eureka client', () => {
     });
 
     afterEach(() => {
-      request.put.restore();
+      got.put.restore();
     });
 
     it('should call heartbeat URI', () => {
-      sinon.stub(request, 'put').yields(null, { statusCode: 200 }, null);
+      sinon.stub(got, 'put').yields(null, { statusCode: 200 }, null);
       client.renew();
 
-      expect(request.put).to.have.been.calledWithMatch({
-        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        uri: 'app/myhost',
+      expect(got.put).to.have.been.calledWithMatch('app/myhost', {
+        prefixUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
       });
     });
 
     it('should trigger a heartbeat event', () => {
-      sinon.stub(request, 'put').yields(null, { statusCode: 200 }, null);
+      sinon.stub(got, 'put').yields(null, { statusCode: 200 }, null);
       const eventSpy = sinon.spy();
       client.on('heartbeat', eventSpy);
       client.renew();
@@ -500,17 +497,16 @@ describe('Eureka client', () => {
     });
 
     it('should re-register on 404', () => {
-      sinon.stub(request, 'put').yields(null, { statusCode: 404 }, null);
-      sinon.stub(request, 'post').yields(null, { statusCode: 204 }, null);
+      sinon.stub(got, 'put').yields(null, { statusCode: 404 }, null);
+      sinon.stub(got, 'post').yields(null, { statusCode: 204 }, null);
       client.renew();
 
-      expect(request.put).to.have.been.calledWithMatch({
-        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        uri: 'app/myhost',
+      expect(got.put).to.have.been.calledWithMatch('app/myhost', {
+        prefixUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
       });
 
-      expect(request.post).to.have.been.calledWithMatch({
-        body: {
+      expect(got.post).to.have.been.calledWithMatch('app', {
+        json: {
           instance: {
             app: 'app',
             hostName: 'myhost',
@@ -520,9 +516,8 @@ describe('Eureka client', () => {
             vipAddress: '1.2.2.3',
           },
         },
-        json: true,
-        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        uri: 'app',
+        responseType: 'json',
+        prefixUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
       });
     });
   });
@@ -692,13 +687,13 @@ describe('Eureka client', () => {
     });
 
     afterEach(() => {
-      request.get.restore();
+      got.get.restore();
       client.transformRegistry.restore();
       client.handleDelta.restore();
     });
 
     it('should should trigger registryUpdated event', () => {
-      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      sinon.stub(got, 'get').yields(null, { statusCode: 200 }, null);
       const eventSpy = sinon.spy();
       client.on('registryUpdated', eventSpy);
       client.fetchRegistry();
@@ -706,13 +701,12 @@ describe('Eureka client', () => {
     });
 
     it('should call registry URI', () => {
-      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
+      sinon.stub(got, 'get').yields(null, { statusCode: 200 }, null);
       const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
-      expect(request.get).to.have.been.calledWithMatch({
-        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        uri: '',
+      expect(got.get).to.have.been.calledWithMatch('', {
+        prefixUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
         headers: { Accept: 'application/json' },
       });
 
@@ -720,15 +714,14 @@ describe('Eureka client', () => {
     });
 
     it('should call registry URI for delta', () => {
-      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, '{ "applications": {} }');
+      sinon.stub(got, 'get').yields(null, { statusCode: 200 }, '{ "applications": {} }');
       const registryCb = sinon.spy();
       client.config.shouldUseDelta = true;
       client.hasFullRegistry = true;
       client.fetchRegistry(registryCb);
 
-      expect(request.get).to.have.been.calledWithMatch({
-        baseUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
-        uri: 'delta',
+      expect(got.get).to.have.been.calledWithMatch('delta', {
+        prefixUrl: 'http://127.0.0.1:9999/eureka/v2/apps/',
         headers: { Accept: 'application/json' },
       });
 
@@ -736,7 +729,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for non-200 response', () => {
-      sinon.stub(request, 'get').yields(null, { statusCode: 500 }, null);
+      sinon.stub(got, 'get').yields(null, { statusCode: 500 }, null);
       const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
@@ -746,7 +739,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for non-200 response for delta', () => {
-      sinon.stub(request, 'get').yields(null, { statusCode: 500 }, null);
+      sinon.stub(got, 'get').yields(null, { statusCode: 500 }, null);
       const registryCb = sinon.spy();
       client.config.shouldUseDelta = true;
       client.hasFullRegistry = true;
@@ -758,7 +751,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for request error', () => {
-      sinon.stub(request, 'get').yields(new Error('request error'), null, null);
+      sinon.stub(got, 'get').yields(new Error('request error'), null, null);
       const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
@@ -766,7 +759,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error for request error for delta request', () => {
-      sinon.stub(request, 'get').yields(new Error('request error'), null, null);
+      sinon.stub(got, 'get').yields(new Error('request error'), null, null);
       const registryCb = sinon.spy();
       client.config.shouldUseDelta = true;
       client.hasFullRegistry = true;
@@ -776,7 +769,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error on invalid JSON', () => {
-      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, '{ blah');
+      sinon.stub(got, 'get').yields(null, { statusCode: 200 }, '{ blah');
       const registryCb = sinon.spy();
       client.fetchRegistry(registryCb);
 
@@ -784,7 +777,7 @@ describe('Eureka client', () => {
     });
 
     it('should throw error on invalid JSON for delta request', () => {
-      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, '{ blah');
+      sinon.stub(got, 'get').yields(null, { statusCode: 200 }, '{ blah');
       const registryCb = sinon.spy();
       client.config.shouldUseDelta = true;
       client.hasFullRegistry = true;
@@ -1052,7 +1045,7 @@ describe('Eureka client', () => {
     beforeEach(() => {});
 
     afterEach(() => {
-      if (request.get.restore) request.get.restore();
+      if (got.get.restore) got.get.restore();
     });
 
     it('should call requestMiddleware with request options', () => {
@@ -1061,8 +1054,8 @@ describe('Eureka client', () => {
       };
       const config = makeConfig(overrides);
       const client = new Eureka(config);
-      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
-      client.eurekaRequest({}, (error) => {
+      sinon.stub(got, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest('', {}, (error) => {
         expect(Boolean(error)).to.equal(false);
         expect(overrides.requestMiddleware).to.be.calledOnce;
         expect(overrides.requestMiddleware.args[0][0]).to.be.an('object');
@@ -1076,8 +1069,8 @@ describe('Eureka client', () => {
       };
       const config = makeConfig(overrides);
       const client = new Eureka(config);
-      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
-      client.eurekaRequest({}, (error) => {
+      sinon.stub(got, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest('', {}, (error) => {
         expect(overrides.requestMiddleware).to.be.calledOnce;
         expect(error).to.be.an('error');
       });
@@ -1088,8 +1081,8 @@ describe('Eureka client', () => {
       };
       const config = makeConfig(overrides);
       const client = new Eureka(config);
-      sinon.stub(request, 'get').yields(null, { statusCode: 200 }, null);
-      client.eurekaRequest({}, (error) => {
+      sinon.stub(got, 'get').yields(null, { statusCode: 200 }, null);
+      client.eurekaRequest('', {}, (error) => {
         expect(error).to.be.an('error');
         expect(error.message).to.equal('requestMiddleware did not return an object');
       });
@@ -1107,14 +1100,14 @@ describe('Eureka client', () => {
       };
       const config = makeConfig(overrides);
       const client = new Eureka(config);
-      const requestStub = sinon.stub(request, 'get');
+      const requestStub = sinon.stub(got, 'get');
       requestStub.onCall(0).yields(null, { statusCode: 500 }, null);
       requestStub.onCall(1).yields(null, { statusCode: 200 }, null);
-      client.eurekaRequest({ uri: '/path' }, (error) => {
+      client.eurekaRequest('/path', {}, (error) => {
         expect(error).to.be.null;
         expect(requestStub).to.be.calledTwice;
-        expect(requestStub.args[0][0]).to.have.property('baseUrl', 'http://serverA');
-        expect(requestStub.args[1][0]).to.have.property('baseUrl', 'http://serverB');
+        expect(requestStub.args[0][1]).to.have.property('prefixUrl', 'http://serverA');
+        expect(requestStub.args[1][1]).to.have.property('prefixUrl', 'http://serverB');
         done();
       });
     });

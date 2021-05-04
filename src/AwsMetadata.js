@@ -1,4 +1,4 @@
-import request from 'request';
+import got from 'got';
 import async from 'async';
 import Logger from './Logger';
 
@@ -63,24 +63,22 @@ export default class AwsMetadata {
   }
 
   lookupMetadataKey(key, callback) {
-    request.get({
-      url: `http://${this.host}/latest/meta-data/${key}`,
-    }, (error, response, body) => {
-      if (error) {
-        this.logger.error('Error requesting metadata key', error);
-      }
-      callback(null, (error || response.statusCode !== 200) ? null : body);
-    });
+    got.get(`http://${this.host}/latest/meta-data/${key}`,
+     (error, response, body) => {
+       if (error) {
+         this.logger.error('Error requesting metadata key', error);
+       }
+       callback(null, (error || response.statusCode !== 200) ? null : body);
+     });
   }
 
   lookupInstanceIdentity(callback) {
-    request.get({
-      url: `http://${this.host}/latest/dynamic/instance-identity/document`,
-    }, (error, response, body) => {
-      if (error) {
-        this.logger.error('Error requesting instance identity document', error);
-      }
-      callback(null, (error || response.statusCode !== 200) ? null : JSON.parse(body));
-    });
+    got.get(`http://${this.host}/latest/dynamic/instance-identity/document`,
+     (error, response, body) => {
+       if (error) {
+         this.logger.error('Error requesting instance identity document', error);
+       }
+       callback(null, (error || response.statusCode !== 200) ? null : JSON.parse(body));
+     });
   }
 }
