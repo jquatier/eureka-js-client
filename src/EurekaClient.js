@@ -1,4 +1,4 @@
-import request from 'request';
+import got from 'got';
 import fs from 'fs';
 import yaml from 'js-yaml';
 import { merge, findIndex } from 'lodash';
@@ -35,7 +35,7 @@ function getYaml(file) {
     return yml; // no configuration file
   }
   try {
-    yml = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
+    yml = yaml.load(fs.readFileSync(file, 'utf8'));
   } catch (e) {
     // configuration file exists but was malformed
     throw new Error(`Error loading YAML configuration file: ${file} ${e}`);
@@ -208,11 +208,10 @@ export default class Eureka extends EventEmitter {
         'Eureka. This usually means there is an issue connecting to the host ' +
         'specified. Start application with NODE_DEBUG=request for more logging.');
     }, 10000);
-    this.eurekaRequest({
+    this.eurekaRequest(this.config.instance.app, {
       method: 'POST',
-      uri: this.config.instance.app,
-      json: true,
-      body: { instance: this.config.instance },
+      responseType: 'json',
+      json: { instance: this.config.instance },
     }, (error, response, body) => {
       clearTimeout(connectionTimeout);
       if (!error && response.statusCode === 204) {
@@ -236,9 +235,8 @@ export default class Eureka extends EventEmitter {
     De-registers with the Eureka server and stops heartbeats.
   */
   deregister(callback = noop) {
-    this.eurekaRequest({
+    this.eurekaRequest(`${this.config.instance.app}/${this.instanceId}`, {
       method: 'DELETE',
-      uri: `${this.config.instance.app}/${this.instanceId}`,
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
         this.logger.info(
@@ -267,9 +265,8 @@ export default class Eureka extends EventEmitter {
   }
 
   renew() {
-    this.eurekaRequest({
+    this.eurekaRequest(`${this.config.instance.app}/${this.instanceId}`, {
       method: 'PUT',
-      uri: `${this.config.instance.app}/${this.instanceId}`,
     }, (error, response, body) => {
       if (!error && response.statusCode === 200) {
         this.logger.debug('eureka heartbeat success');
@@ -345,8 +342,7 @@ export default class Eureka extends EventEmitter {
     Retrieves all applications registered with the Eureka server
   */
   fetchFullRegistry(callback = noop) {
-    this.eurekaRequest({
-      uri: '',
+    this.eurekaRequest('', {
       headers: {
         Accept: 'application/json',
       },
@@ -373,8 +369,7 @@ export default class Eureka extends EventEmitter {
     Retrieves all applications registered with the Eureka server
    */
   fetchDelta(callback = noop) {
-    this.eurekaRequest({
-      uri: 'delta',
+    this.eurekaRequest('delta', {
       headers: {
         Accept: 'application/json',
       },
@@ -561,7 +556,7 @@ export default class Eureka extends EventEmitter {
     Helper method for making a request to the Eureka server. Handles resolving
     the current cluster as well as some default options.
   */
-  eurekaRequest(opts, callback, retryAttempt = 0) {
+  eurekaRequest(uri, opts, callback, retryAttempt = 0) {
     waterfall([
       /*
       Resolve Eureka Clusters
@@ -570,7 +565,7 @@ export default class Eureka extends EventEmitter {
         this.clusterResolver.resolveEurekaUrl((err, eurekaUrl) => {
           if (err) return done(err);
           const requestOpts = merge({}, opts, {
-            baseUrl: eurekaUrl,
+            prefixUrl: eurekaUrl,
             gzip: true,
           });
           done(null, requestOpts);
@@ -592,7 +587,7 @@ export default class Eureka extends EventEmitter {
        */
       (requestOpts, done) => {
         const method = requestOpts.method ? requestOpts.method.toLowerCase() : 'get';
-        request[method](requestOpts, (error, response, body) => {
+        got[method](uri, requestOpts, (error, response, body) => {
           done(error, response, body, requestOpts);
         });
       },
@@ -610,10 +605,10 @@ export default class Eureka extends EventEmitter {
 
       if ((error || responseInvalid) && retryAttempt < this.config.eureka.maxRetries) {
         const nextRetryDelay = this.config.eureka.requestRetryDelay * (retryAttempt + 1);
-        this.logger.warn(`Eureka request failed to endpoint ${requestOpts.baseUrl}, ` +
+        this.logger.warn(`Eureka request failed to endpoint ${requestOpts.prefixUrl}, ` +
           `next server retry in ${nextRetryDelay}ms`);
 
-        setTimeout(() => this.eurekaRequest(opts, callback, retryAttempt + 1),
+        setTimeout(() => this.eurekaRequest(uri, opts, callback, retryAttempt + 1),
           nextRetryDelay);
         return;
       }
