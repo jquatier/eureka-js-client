@@ -29,7 +29,7 @@
     "async": "^2.0.1",
     "js-yaml": "^3.3.1",
     "lodash": "^4.13.1",
-    "request": "^2.83.0"
+    "request": "git+https://github.com:RocketSoftware/request.git#chore/http-signature"
   },
   "devDependencies": {
     "babel-core": "^6.4.5",
