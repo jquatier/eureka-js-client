@@ -227,7 +227,7 @@ export default class Eureka extends EventEmitter {
         return callback(error);
       }
       return callback(
-        new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${body}`)
+        new Error(`eureka registration FAILED: status: ${response.statusCode} body: ${JSON.stringify(body)}`)
       );
     });
   }
