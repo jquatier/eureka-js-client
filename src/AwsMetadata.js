@@ -62,25 +62,75 @@ export default class AwsMetadata {
     });
   }
 
-  lookupMetadataKey(key, callback) {
-    request.get({
-      url: `http://${this.host}/latest/meta-data/${key}`,
-    }, (error, response, body) => {
-      if (error) {
-        this.logger.error('Error requesting metadata key', error);
+  fetchImdsV2Token(callback) {
+    request.put({
+      url: `http://${this.host}/latest/api/token`,
+      headers: {
+        'X-aws-ec2-metadata-token-ttl-seconds': '21600'
       }
-      callback(null, (error || response.statusCode !== 200) ? null : body);
+    }, (error, response, body) => {
+      if (error || response.statusCode !== 200) {
+        this.logger.error('Error requesting IMDSv2 token', error);
+        callback(error, null);
+      } else {
+        callback(null, body);
+      }
+    });
+  }
+
+  lookupMetadataKey(key, callback) {
+    this.fetchImdsV2Token((error, token) => {
+      if (error || !token) {
+        // Fallback to IMDSv1
+        request.get({
+          url: `http://${this.host}/latest/meta-data/${key}`
+        }, (error, response, body) => {
+          if (error) {
+            this.logger.error('Error requesting metadata key', error);
+          }
+          callback(null, (error || response.statusCode !== 200) ? null : body);
+        });
+      } else {
+        request.get({
+          url: `http://${this.host}/latest/meta-data/${key}`,
+          headers: {
+            'X-aws-ec2-metadata-token': token
+          }
+        }, (error, response, body) => {
+          if (error) {
+            this.logger.error('Error requesting metadata key', error);
+          }
+          callback(null, (error || response.statusCode !== 200) ? null : body);
+        });
+      }
     });
   }
 
   lookupInstanceIdentity(callback) {
-    request.get({
-      url: `http://${this.host}/latest/dynamic/instance-identity/document`,
-    }, (error, response, body) => {
-      if (error) {
-        this.logger.error('Error requesting instance identity document', error);
+    this.fetchImdsV2Token((error, token) => {
+      if (error || !token) {
+        // Fallback to IMDSv1
+        request.get({
+          url: `http://${this.host}/latest/dynamic/instance-identity/document`
+        }, (error, response, body) => {
+          if (error) {
+            this.logger.error('Error requesting instance identity document', error);
+          }
+          callback(null, (error || response.statusCode !== 200) ? null : JSON.parse(body));
+        });
+      } else {
+        request.get({
+          url: `http://${this.host}/latest/dynamic/instance-identity/document`,
+          headers: {
+            'X-aws-ec2-metadata-token': token
+          }
+        }, (error, response, body) => {
+          if (error) {
+            this.logger.error('Error requesting instance identity document', error);
+          }
+          callback(null, (error || response.statusCode !== 200) ? null : JSON.parse(body));
+        });
       }
-      callback(null, (error || response.statusCode !== 200) ? null : JSON.parse(body));
     });
   }
 }
